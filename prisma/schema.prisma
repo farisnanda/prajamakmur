@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN_KOPERASI
+  BENDAHARA
+  PENGURUS
+  ANGGOTA
+  AUDITOR
+}
+
+enum EmploymentStatus {
+  PNS
+  PPPK
+  PPPK_PARUH_WAKTU
+}
+
+enum SavingsType {
+  POKOK
+  WAJIB
+  SUKARELA
+}
+
+enum SavingsTransactionType {
+  SETORAN
+  PENARIKAN
+}
+
+model SavingsSetting {
+  id                  String   @id @default("default")
+  principalAmount     Decimal  @default(500000) @db.Decimal(18, 2)
+  mandatoryPnsAmount  Decimal  @default(300000) @map("mandatoryAmount") @db.Decimal(18, 2)
+  mandatoryPppkAmount Decimal  @default(200000) @db.Decimal(18, 2)
+  updatedAt           DateTime @updatedAt
+
+  @@map("savings_settings")
+}
+
+model SavingsTransaction {
+  id              String                 @id @default(cuid())
+  receiptNumber   String                 @unique
+  memberId        String
+  member          Member                 @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  savingsType     SavingsType
+  transactionType SavingsTransactionType @default(SETORAN)
+  amount          Decimal                @db.Decimal(18, 2)
+  transactionDate DateTime               @default(now())
+  periodKey       String?
+  note            String?
+  createdById     String
+  createdBy       User                   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt       DateTime               @default(now())
+
+  @@unique([memberId, savingsType, periodKey])
+  @@index([memberId, transactionDate])
+  @@index([savingsType, transactionDate])
+  @@map("savings_transactions")
+}
+
+model Member {
+  id               String           @id @default(cuid())
+  memberNumber     String           @unique
+  nik              String           @unique
+  employeeNumber   String?          @unique
+  name             String
+  employmentStatus EmploymentStatus
+  phone            String?
+  address          String?
+  joinedAt         DateTime         @default(now())
+  isActive         Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  savings          SavingsTransaction[]
+
+  @@index([name])
+  @@index([employmentStatus])
+  @@map("members")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(ANGGOTA)
+  isActive  Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  savingsTransactions SavingsTransaction[]
+
+  @@map("users")
+}
