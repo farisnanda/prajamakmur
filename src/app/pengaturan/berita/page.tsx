@@ -50,6 +50,12 @@ export default async function Page({
           <span className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white">
             Berita & Kegiatan
           </span>
+          <Link
+            href="/pengaturan/akun"
+            className="rounded-xl border bg-white px-4 py-2 text-sm font-bold text-slate-600"
+          >
+            Pengaturan Akun
+          </Link>
         </div>
         <section className="grid grid-cols-12 gap-6">
           <div className="col-span-5 rounded-[28px] bg-white p-7 shadow-sm">

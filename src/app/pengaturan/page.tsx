@@ -94,6 +94,12 @@ export default async function Page({
           >
             Berita & Kegiatan
           </Link>
+          <Link
+            href="/pengaturan/akun"
+            className="rounded-xl border bg-white px-4 py-2 text-sm font-bold text-slate-600"
+          >
+            Pengaturan Akun
+          </Link>
         </div>
         <form action={updateLanding} className="space-y-6">
           <section className="rounded-[28px] border border-slate-100 bg-white p-7 shadow-sm">
@@ -104,13 +110,16 @@ export default async function Page({
             <div className="mt-5 grid grid-cols-2 gap-5">
               {(
                 [
-                ["heroImage", "Kotak Ringkasan Anggota di Hero"],
-                ["showcaseImage1", "Kotak Kondisi Keuangan — Transparan & Terukur"],
-                ["showcaseImage2", "Kotak Proses — Satu Akun & Satu Saldo"],
+                  ["heroImage", "Kotak Ringkasan Anggota di Hero"],
+                  [
+                    "showcaseImage1",
+                    "Kotak Kondisi Keuangan — Transparan & Terukur",
+                  ],
+                  ["showcaseImage2", "Kotak Proses — Satu Akun & Satu Saldo"],
                   ["ctaImage", "Latar CTA"],
-                ["feature1Image", "Foto Kartu Fitur Simpanan (bagian gelap)"],
-                ["feature2Image", "Foto Kartu Fitur Pinjaman (bagian gelap)"],
-                ["feature3Image", "Foto Kartu Fitur Keuangan (bagian gelap)"],
+                  ["feature1Image", "Foto Kartu Fitur Simpanan (bagian gelap)"],
+                  ["feature2Image", "Foto Kartu Fitur Pinjaman (bagian gelap)"],
+                  ["feature3Image", "Foto Kartu Fitur Keuangan (bagian gelap)"],
                 ] as const
               ).map(([name, label]) => (
                 <label
