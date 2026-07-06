@@ -189,11 +189,13 @@ export async function disburseLoan(formData: FormData) {
     ["ADMIN_KOPERASI", "SUPER_ADMIN"],
     "FINAL_APPROVED",
   );
-  const reference = z
+  const referenceResult = z
     .string()
     .trim()
     .min(3)
-    .parse(formData.get("transferReference"));
+    .safeParse(formData.get("transferReference"));
+  if (!referenceResult.success) redirect("/pinjaman?error=invalid-reference");
+  const reference = referenceResult.data;
   const principal = loan.principalAmount.toNumber(),
     rate = loan.interestRate.toNumber() / 100 / 12;
   const payment = Math.ceil(

@@ -113,7 +113,9 @@ export default async function LoansPage({
           <div className="mb-6 rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-sm font-semibold text-red-700">
             {query.error === "insufficient-cash"
               ? `Kas Umum tidak mencukupi. Dana tersedia ${rupiah(Number(query.available ?? 0))}, sedangkan pengajuan membutuhkan ${rupiah(Number(query.required ?? 0))}.`
-              : "Pengajuan tidak ditemukan atau sudah diproses."}
+              : query.error === "invalid-reference"
+                ? "Nomor referensi transfer wajib diisi minimal 3 karakter."
+                : "Pengajuan tidak ditemukan atau sudah diproses."}
           </div>
         )}
         <section className="grid grid-cols-3 gap-5">
@@ -246,6 +248,7 @@ function LoanList({
                           <input
                             name="transferReference"
                             required
+                            minLength={3}
                             className="h-9 w-40 rounded-lg border border-slate-200 px-3 text-xs text-slate-900"
                             placeholder="No. referensi transfer"
                           />
