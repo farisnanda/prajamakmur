@@ -33,6 +33,7 @@ export default async function LoanPaymentsPage({
   searchParams: Promise<{
     q?: string;
     page?: string;
+    bulan?: string;
     success?: string;
     created?: string;
     skipped?: string;
@@ -47,6 +48,19 @@ export default async function LoanPaymentsPage({
     redirect("/dashboard");
   const query = await searchParams;
   const keyword = query.q?.trim() ?? "";
+  const bulanFilter = /^\d{4}-\d{2}$/.test(query.bulan ?? "")
+    ? query.bulan!
+    : "";
+  const paymentDateRange = bulanFilter
+    ? {
+        gte: new Date(`${bulanFilter}-01T00:00:00`),
+        lt: new Date(
+          new Date(`${bulanFilter}-01T00:00:00`).getFullYear(),
+          new Date(`${bulanFilter}-01T00:00:00`).getMonth() + 1,
+          1,
+        ),
+      }
+    : undefined;
   const requestedPage = Math.max(
     1,
     Number.parseInt(query.page ?? "1", 10) || 1,
@@ -147,9 +161,10 @@ export default async function LoanPaymentsPage({
     0,
   );
   const pageHref = (target: number) =>
-    `/pinjaman/pembayaran?page=${target}${keyword ? `&q=${encodeURIComponent(keyword)}` : ""}`;
+    `/pinjaman/pembayaran?page=${target}${keyword ? `&q=${encodeURIComponent(keyword)}` : ""}${bulanFilter ? `&bulan=${bulanFilter}` : ""}`;
   const recentPayments = await prisma.loanPayment.findMany({
-    take: 10,
+    where: paymentDateRange ? { paymentDate: paymentDateRange } : undefined,
+    take: bulanFilter ? 200 : 10,
     orderBy: { paymentDate: "desc" },
     select: {
       id: true,
@@ -158,9 +173,11 @@ export default async function LoanPaymentsPage({
       amount: true,
       principalComponent: true,
       interestComponent: true,
+      installmentNumber: true,
       loan: {
         select: {
           loanNumber: true,
+          tenureMonths: true,
           member: { select: { name: true, memberNumber: true } },
         },
       },
@@ -246,10 +263,36 @@ export default async function LoanPaymentsPage({
           </div>
         </section>
         <section className="mt-6 rounded-[28px] border border-slate-100 bg-white p-7 shadow-sm">
-          <h3 className="text-lg font-bold">Riwayat Pembayaran Pinjaman</h3>
-          <p className="text-sm text-slate-500">
-            10 transaksi pembayaran terakhir beserta tanggal pencatatan
-          </p>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-bold">Riwayat Pembayaran Pinjaman</h3>
+              <p className="text-sm text-slate-500">
+                {bulanFilter
+                  ? `Transaksi pembayaran pada periode ${bulanFilter}`
+                  : "10 transaksi pembayaran terakhir beserta tanggal pencatatan"}
+              </p>
+            </div>
+            <form className="flex items-center gap-2">
+              {keyword && <input type="hidden" name="q" value={keyword} />}
+              <input
+                name="bulan"
+                type="month"
+                defaultValue={bulanFilter}
+                className="h-11 rounded-xl border border-slate-200 px-3 text-sm text-slate-900"
+              />
+              <button className="h-11 rounded-xl bg-blue-50 px-4 text-xs font-bold text-blue-700">
+                Filter
+              </button>
+              {bulanFilter && (
+                <Link
+                  href={`/pinjaman/pembayaran${keyword ? `?q=${encodeURIComponent(keyword)}` : ""}`}
+                  className="text-xs font-bold text-slate-500"
+                >
+                  Reset
+                </Link>
+              )}
+            </form>
+          </div>
           <div className="mt-5 overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
@@ -257,6 +300,7 @@ export default async function LoanPaymentsPage({
                   <th>Tanggal</th>
                   <th>Anggota</th>
                   <th>Pinjaman</th>
+                  <th>Angsuran Ke</th>
                   <th>Pokok</th>
                   <th>Bunga Jasa</th>
                   <th className="text-right">Total Bayar</th>
@@ -282,6 +326,11 @@ export default async function LoanPaymentsPage({
                         {p.receiptNumber}
                       </p>
                     </td>
+                    <td>
+                      <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
+                        {p.installmentNumber}/{p.loan.tenureMonths}
+                      </span>
+                    </td>
                     <td>{rupiah(p.principalComponent.toNumber())}</td>
                     <td className="font-semibold text-emerald-700">
                       {rupiah(p.interestComponent.toNumber())}
@@ -291,6 +340,14 @@ export default async function LoanPaymentsPage({
                     </td>
                   </tr>
                 ))}
+                {!recentPayments.length && (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-slate-400">
+                      Tidak ada transaksi pembayaran
+                      {bulanFilter ? ` pada periode ${bulanFilter}.` : "."}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

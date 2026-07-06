@@ -185,6 +185,7 @@ model LoanPayment {
   amount        Decimal  @db.Decimal(18, 2)
   principalComponent Decimal @default(0) @db.Decimal(18, 2)
   interestComponent Decimal @default(0) @db.Decimal(18, 2)
+  installmentNumber Int
   paymentDate   DateTime @default(now())
   periodKey     String?
   note          String?

@@ -10,6 +10,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { getServerSession } from "next-auth";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Topbar } from "@/components/layout/Topbar";
@@ -63,11 +64,19 @@ const transactions = [
   ["Pengajuan Pinjaman", "Dewi Lestari", "Rp10.000.000", "Menunggu"],
 ];
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ bulan?: string }>;
+}) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
   if (session.user.role === "ANGGOTA") {
+    const query = await searchParams;
+    const bulanFilter = /^\d{4}-\d{2}$/.test(query.bulan ?? "")
+      ? query.bulan!
+      : "";
     const member = await prisma.member.findFirst({
       where: { user: { id: session.user.id } },
       include: {
@@ -92,6 +101,7 @@ export default async function DashboardPage() {
                 amount: true,
                 principalComponent: true,
                 interestComponent: true,
+                installmentNumber: true,
                 paymentDate: true,
               },
             },
@@ -100,7 +110,13 @@ export default async function DashboardPage() {
         },
       },
     });
-    return <MemberDashboard user={session.user} member={member} />;
+    return (
+      <MemberDashboard
+        user={session.user}
+        member={member}
+        bulanFilter={bulanFilter}
+      />
+    );
   }
 
   return <AdminDashboard user={session.user} />;
@@ -269,6 +285,7 @@ type MemberDashboardData = NonNullable<
                   amount: true;
                   principalComponent: true;
                   interestComponent: true;
+                  installmentNumber: true;
                   paymentDate: true;
                 };
               };
@@ -284,9 +301,11 @@ type MemberDashboardData = NonNullable<
 function MemberDashboard({
   user,
   member,
+  bulanFilter,
 }: {
   user: Parameters<typeof Topbar>[0]["user"];
   member: MemberDashboardData | null;
+  bulanFilter: string;
 }) {
   if (!member)
     return (
@@ -465,10 +484,23 @@ function MemberDashboard({
                     </span>
                   </div>
                   {loan.status === "ACTIVE" && (
-                    <p className="mt-3 text-sm font-semibold text-blue-700">
-                      Angsuran {rupiah(loan.monthlyPayment?.toNumber() ?? 0)} /
-                      bulan
-                    </p>
+                    <>
+                      <p className="mt-3 text-sm font-semibold text-blue-700">
+                        Angsuran {rupiah(loan.monthlyPayment?.toNumber() ?? 0)}{" "}
+                        / bulan
+                      </p>
+                      <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
+                        <div
+                          className="h-full rounded-full bg-blue-600"
+                          style={{
+                            width: `${Math.min(100, (loan.payments.length / loan.tenureMonths) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                      <p className="mt-2 text-xs font-semibold text-slate-500">
+                        Angsuran ke-{loan.payments.length}/{loan.tenureMonths}
+                      </p>
+                    </>
                   )}
                 </div>
               ))}
@@ -487,18 +519,44 @@ function MemberDashboard({
           </div>
         </section>
         <section className="mt-6 rounded-[28px] border border-slate-100 bg-white p-7 shadow-sm">
-          <h3 className="text-lg font-bold text-slate-900">
-            Riwayat Pembayaran Pinjaman
-          </h3>
-          <p className="text-sm text-slate-500">
-            Tanggal dan rincian angsuran yang telah dibayarkan
-          </p>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">
+                Riwayat Pembayaran Pinjaman
+              </h3>
+              <p className="text-sm text-slate-500">
+                {bulanFilter
+                  ? `Angsuran yang dibayarkan pada periode ${bulanFilter}`
+                  : "Tanggal dan rincian angsuran yang telah dibayarkan"}
+              </p>
+            </div>
+            <form className="flex items-center gap-2">
+              <input
+                name="bulan"
+                type="month"
+                defaultValue={bulanFilter}
+                className="h-11 rounded-xl border border-slate-200 px-3 text-sm text-slate-900"
+              />
+              <button className="h-11 rounded-xl bg-blue-50 px-4 text-xs font-bold text-blue-700">
+                Filter
+              </button>
+              {bulanFilter && (
+                <Link
+                  href="/dashboard"
+                  className="text-xs font-bold text-slate-500"
+                >
+                  Reset
+                </Link>
+              )}
+            </form>
+          </div>
           <div className="mt-5 overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr>
                   <th>Tanggal</th>
                   <th>Pinjaman</th>
+                  <th>Angsuran Ke</th>
                   <th>Pokok</th>
                   <th>Bunga Jasa</th>
                   <th className="text-right">Total Bayar</th>
@@ -509,12 +567,22 @@ function MemberDashboard({
                   .flatMap((loan) =>
                     loan.payments.map((payment) => ({ loan, payment })),
                   )
+                  .filter(({ payment }) =>
+                    bulanFilter
+                      ? new Intl.DateTimeFormat("sv-SE", {
+                          year: "numeric",
+                          month: "2-digit",
+                        })
+                          .format(payment.paymentDate)
+                          .startsWith(bulanFilter)
+                      : true,
+                  )
                   .sort(
                     (a, b) =>
                       b.payment.paymentDate.getTime() -
                       a.payment.paymentDate.getTime(),
                   )
-                  .slice(0, 10)
+                  .slice(0, bulanFilter ? undefined : 10)
                   .map(({ loan, payment }) => (
                     <tr key={payment.id}>
                       <td>
@@ -528,6 +596,11 @@ function MemberDashboard({
                           {payment.receiptNumber}
                         </p>
                       </td>
+                      <td>
+                        <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
+                          {payment.installmentNumber}/{loan.tenureMonths}
+                        </span>
+                      </td>
                       <td>{rupiah(payment.principalComponent.toNumber())}</td>
                       <td className="text-emerald-700">
                         {rupiah(payment.interestComponent.toNumber())}
@@ -537,6 +610,13 @@ function MemberDashboard({
                       </td>
                     </tr>
                   ))}
+                {!member.loans.some((loan) => loan.payments.length) && (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-slate-400">
+                      Belum ada pembayaran pinjaman.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

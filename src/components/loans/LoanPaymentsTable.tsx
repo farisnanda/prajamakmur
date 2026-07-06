@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Banknote, CheckSquare, Eye, X } from "lucide-react";
 import {
   createBulkLoanPayments,
-  createLoanPayment,
+  createLoanInstallmentPayments,
 } from "@/app/pinjaman/pembayaran/actions";
 
 export type BorrowerPaymentRow = {
@@ -333,93 +333,175 @@ export function LoanPaymentsTable({
         </div>
       )}
       {payment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-5">
-          <div className="w-full max-w-xl rounded-[28px] bg-white shadow-2xl">
-            <div className="flex items-start justify-between border-b border-slate-100 p-6">
-              <div>
-                <h3 className="text-xl font-bold text-slate-900">
-                  Bayar Pinjaman
-                </h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  {payment.name} · {payment.memberNumber}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPayment(null)}
-                aria-label="Tutup pembayaran pinjaman"
-              >
-                <X />
-              </button>
-            </div>
-            <form
-              data-financial-transaction
-              action={createLoanPayment}
-              className="space-y-5 p-6"
-            >
-              <label className="block text-sm font-semibold text-slate-700">
-                Pilih Pinjaman
-                <select
-                  name="loanId"
-                  required
-                  className="mt-2 h-12 w-full rounded-xl border border-slate-200 px-4 text-sm text-slate-900"
-                >
-                  {payment.loans.map((loan, index) => (
-                    <option key={loan.id} value={loan.id}>
-                      Pinjaman ke-{index + 1} · {loan.loanNumber} · sisa{" "}
-                      {rupiah(loan.outstanding)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="grid grid-cols-2 gap-4">
-                <label className="text-sm font-semibold text-slate-700">
-                  Nominal Pembayaran
-                  <input
-                    name="amount"
-                    type="number"
-                    min="1"
-                    required
-                    className="mt-2 h-12 w-full rounded-xl border border-slate-200 px-4 text-sm text-slate-900"
-                    placeholder="Masukkan nominal"
-                  />
-                </label>
-                <label className="text-sm font-semibold text-slate-700">
-                  Tanggal Pembayaran
-                  <input
-                    name="paymentDate"
-                    type="date"
-                    defaultValue={localToday()}
-                    required
-                    className="mt-2 h-12 w-full rounded-xl border border-slate-200 px-4 text-sm text-slate-900"
-                  />
-                </label>
-              </div>
-              <label className="block text-sm font-semibold text-slate-700">
-                Catatan
-                <input
-                  name="note"
-                  className="mt-2 h-12 w-full rounded-xl border border-slate-200 px-4 text-sm text-slate-900"
-                  placeholder="Catatan opsional"
-                />
-              </label>
-              <div className="flex justify-end gap-3 border-t border-slate-100 pt-5">
-                <button
-                  type="button"
-                  onClick={() => setPayment(null)}
-                  className="h-11 rounded-xl border border-slate-200 px-5 text-sm font-bold text-slate-700"
-                >
-                  Batal
-                </button>
-                <button className="inline-flex h-11 items-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white">
-                  <Banknote size={18} />
-                  Bayar Pinjaman
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <PayLoanModal borrower={payment} onClose={() => setPayment(null)} />
       )}
     </>
+  );
+}
+
+function PayLoanModal({
+  borrower,
+  onClose,
+}: {
+  borrower: BorrowerPaymentRow;
+  onClose: () => void;
+}) {
+  const [loanId, setLoanId] = useState(borrower.loans[0]?.id ?? "");
+  const loan =
+    borrower.loans.find((item) => item.id === loanId) ?? borrower.loans[0];
+  const remainingCount = loan ? loan.tenureMonths - loan.paymentCount : 0;
+  const installmentNumbers = loan
+    ? Array.from(
+        { length: remainingCount },
+        (_, index) => loan.paymentCount + index + 1,
+      )
+    : [];
+  const [selected, setSelected] = useState<number[]>([]);
+  const toggleInstallment = (installmentNumber: number) =>
+    setSelected((current) =>
+      current.includes(installmentNumber)
+        ? current.filter((item) => item !== installmentNumber)
+        : [...current, installmentNumber],
+    );
+  const toggleAll = () =>
+    setSelected((current) =>
+      current.length === installmentNumbers.length ? [] : installmentNumbers,
+    );
+  const estimatedTotal = loan
+    ? Math.min(loan.outstanding, selected.length * loan.installment)
+    : 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-5">
+      <div className="w-full max-w-xl rounded-[28px] bg-white shadow-2xl">
+        <div className="flex items-start justify-between border-b border-slate-100 p-6">
+          <div>
+            <h3 className="text-xl font-bold text-slate-900">
+              Bayar Pinjaman
+            </h3>
+            <p className="mt-1 text-sm text-slate-500">
+              {borrower.name} · {borrower.memberNumber}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Tutup pembayaran pinjaman"
+          >
+            <X />
+          </button>
+        </div>
+        <form
+          data-financial-transaction
+          action={createLoanInstallmentPayments}
+          className="space-y-5 p-6"
+        >
+          <label className="block text-sm font-semibold text-slate-700">
+            Pilih Pinjaman
+            <select
+              name="loanId"
+              required
+              value={loanId}
+              onChange={(event) => {
+                setLoanId(event.target.value);
+                setSelected([]);
+              }}
+              className="mt-2 h-12 w-full rounded-xl border border-slate-200 px-4 text-sm text-slate-900"
+            >
+              {borrower.loans.map((item, index) => (
+                <option key={item.id} value={item.id}>
+                  Pinjaman ke-{index + 1} · {item.loanNumber} · sisa{" "}
+                  {rupiah(item.outstanding)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div>
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-700">
+                Pilih Angsuran yang Dibayar
+              </p>
+              <button
+                type="button"
+                onClick={toggleAll}
+                className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700"
+              >
+                {selected.length === installmentNumbers.length
+                  ? "Tidak Centang Semua"
+                  : "Centang Semua"}
+              </button>
+            </div>
+            <div className="mt-3 max-h-56 overflow-y-auto rounded-xl border border-slate-200">
+              {installmentNumbers.map((installmentNumber) => (
+                <label
+                  key={installmentNumber}
+                  className="flex cursor-pointer items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0"
+                >
+                  <span className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      name="installments"
+                      value={installmentNumber}
+                      checked={selected.includes(installmentNumber)}
+                      onChange={() => toggleInstallment(installmentNumber)}
+                    />
+                    <span className="font-semibold text-slate-800">
+                      Angsuran ke-{installmentNumber}/{loan?.tenureMonths}
+                    </span>
+                  </span>
+                  <span className="text-sm font-bold text-blue-700">
+                    {rupiah(loan?.installment ?? 0)}
+                  </span>
+                </label>
+              ))}
+              {!installmentNumbers.length && (
+                <p className="px-4 py-6 text-center text-sm text-slate-400">
+                  Tidak ada angsuran yang tersisa.
+                </p>
+              )}
+            </div>
+          </div>
+          <label className="block text-sm font-semibold text-slate-700">
+            Tanggal Pembayaran
+            <input
+              name="paymentDate"
+              type="date"
+              defaultValue={localToday()}
+              required
+              className="mt-2 h-12 w-full rounded-xl border border-slate-200 px-4 text-sm text-slate-900"
+            />
+          </label>
+          <label className="block text-sm font-semibold text-slate-700">
+            Catatan
+            <input
+              name="note"
+              className="mt-2 h-12 w-full rounded-xl border border-slate-200 px-4 text-sm text-slate-900"
+              placeholder="Catatan opsional"
+            />
+          </label>
+          <div className="flex items-center justify-between border-t border-slate-100 pt-5">
+            <p className="text-sm font-bold text-slate-700">
+              {selected.length} angsuran · {rupiah(estimatedTotal)}
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="h-11 rounded-xl border border-slate-200 px-5 text-sm font-bold text-slate-700"
+              >
+                Batal
+              </button>
+              <button
+                disabled={!selected.length}
+                className="inline-flex h-11 items-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white disabled:opacity-50"
+              >
+                <Banknote size={18} />
+                Bayar Pinjaman
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

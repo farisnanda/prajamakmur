@@ -204,8 +204,16 @@ export async function disburseLoan(formData: FormData) {
       : (principal * rate * (1 + rate) ** loan.tenureMonths) /
           ((1 + rate) ** loan.tenureMonths - 1),
   );
-  const start = new Date(),
-    due = new Date(start);
+  const disbursedNow = new Date();
+  // Angsuran pertama jatuh tempo di awal bulan berikutnya setelah pengajuan
+  // diajukan (bukan tanggal pencairan), karena potongan gaji tidak selalu
+  // cair di tanggal yang sama setiap bulan.
+  const start = new Date(
+    loan.applicationDate.getFullYear(),
+    loan.applicationDate.getMonth() + 1,
+    1,
+  );
+  const due = new Date(start);
   due.setMonth(due.getMonth() + loan.tenureMonths);
   const cashBefore = await prisma.cashAccount.findUnique({
     where: { code: "KAS_UMUM" },
@@ -227,7 +235,7 @@ export async function disburseLoan(formData: FormData) {
       where: { id: loanId },
       data: {
         status: "ACTIVE",
-        disbursedAt: new Date(),
+        disbursedAt: disbursedNow,
         transferReference: reference,
         startDate: start,
         dueDate: due,
@@ -244,7 +252,7 @@ export async function disburseLoan(formData: FormData) {
         accountId: cash.id,
         type: "OUTFLOW",
         amount: loan.principalAmount,
-        transactionDate: start,
+        transactionDate: disbursedNow,
         description: `Pencairan pinjaman ${loan.loanNumber}`,
         note: `Transfer ${reference}`,
       },
@@ -252,7 +260,7 @@ export async function disburseLoan(formData: FormData) {
     await tx.bookkeepingEntry.create({
       data: {
         reference: `BK-PENCAIRAN-${loan.loanNumber}`,
-        transactionDate: start,
+        transactionDate: disbursedNow,
         description: `Pencairan pinjaman ${loan.loanNumber}`,
         debitAccount: "Piutang Pinjaman Anggota",
         creditAccount: cash.name,
