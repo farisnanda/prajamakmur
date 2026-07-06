@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { landingData, mediaUrl } from "@/lib/landing";
+export const dynamic = "force-dynamic";
 export default async function Home() {
   const [row, news] = await Promise.all([
     prisma.landingContent.findUnique({ where: { id: "default" } }),

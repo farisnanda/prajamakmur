@@ -1,0 +1,50 @@
+name: prajamakmur
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: prajamakmur-db
+    restart: unless-stopped
+    env_file: .env.production
+    volumes:
+      - prajamakmur_postgres_data:/var/lib/postgresql/data
+    networks:
+      - prajamakmur-private
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: prajamakmur-app
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:3010:3000"
+    volumes:
+      - ./data/uploads:/app/public/uploads
+    networks:
+      - prajamakmur-private
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/prajamakmur >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+networks:
+  prajamakmur-private:
+    name: prajamakmur-private
+    driver: bridge
+
+volumes:
+  prajamakmur_postgres_data:
+    name: prajamakmur-postgres-data
