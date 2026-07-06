@@ -5,6 +5,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build
 RUN npx prisma generate && npm run build
 
 FROM node:22-alpine AS runtime
