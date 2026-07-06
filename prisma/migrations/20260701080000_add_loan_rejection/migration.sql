@@ -1,0 +1,2 @@
+ALTER TYPE "LoanStatus" ADD VALUE 'REJECTED';
+ALTER TABLE "loans" ADD COLUMN "rejectionNote" TEXT, ADD COLUMN "rejectedAt" TIMESTAMP(3);

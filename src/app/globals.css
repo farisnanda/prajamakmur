@@ -17,3 +17,176 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
+
+/* Shared data-table styling. Filters, search, pagination and actions remain page-owned. */
+main table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: #334155;
+}
+
+main table thead tr {
+  background: linear-gradient(90deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+main table thead th {
+  border-block: 1px solid #e2e8f0;
+  padding: 0.9rem 1rem;
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1.25rem;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+main table thead th:first-child {
+  border-left: 1px solid #e2e8f0;
+  border-radius: 0.85rem 0 0 0.85rem;
+}
+
+main table thead th:last-child {
+  border-right: 1px solid #e2e8f0;
+  border-radius: 0 0.85rem 0.85rem 0;
+}
+
+main table tbody td {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 1rem;
+  vertical-align: middle;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+main table tbody tr:hover td {
+  background-color: #f8fbff;
+}
+
+main table tbody tr:hover td:first-child {
+  box-shadow: inset 3px 0 0 #3b82f6;
+}
+
+main table tbody tr:last-child td {
+  border-bottom-color: transparent;
+}
+
+main table tbody td:first-child {
+  border-radius: 0.7rem 0 0 0.7rem;
+}
+
+main table tbody td:last-child {
+  border-radius: 0 0.7rem 0.7rem 0;
+}
+
+main table tbody b,
+main table tbody strong {
+  color: #0f172a;
+  font-weight: 750;
+}
+
+main table button,
+main table a {
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease,
+    background-color 150ms ease;
+}
+
+main table button:hover,
+main table a:hover {
+  transform: translateY(-1px);
+}
+
+@keyframes landing-rise {
+  from {
+    opacity: 0;
+    transform: translateY(42px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes landing-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-0.4deg);
+  }
+  50% {
+    transform: translateY(-14px) rotate(0.4deg);
+  }
+}
+@keyframes landing-orbit {
+  from {
+    transform: rotate(0deg) translateX(8px) rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg) translateX(8px) rotate(-360deg);
+  }
+}
+@keyframes landing-shimmer {
+  from {
+    transform: translateX(-140%) skewX(-18deg);
+  }
+  to {
+    transform: translateX(240%) skewX(-18deg);
+  }
+}
+
+.landing-page section > .landing-container,
+.landing-page section > div {
+  animation: landing-rise 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.landing-page .landing-float {
+  animation: landing-float 5.5s ease-in-out infinite;
+}
+.landing-page .landing-orbit {
+  animation: landing-orbit 13s linear infinite;
+}
+.landing-page .landing-card {
+  transition:
+    transform 0.35s ease,
+    box-shadow 0.35s ease,
+    border-color 0.35s ease;
+}
+.landing-page .landing-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 28px 70px -30px rgba(30, 64, 175, 0.35);
+  border-color: #bfdbfe;
+}
+.landing-page .landing-shine {
+  position: relative;
+  overflow: hidden;
+}
+.landing-page .landing-shine::after {
+  content: "";
+  position: absolute;
+  inset: -30% auto -30% 0;
+  width: 35%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: landing-shimmer 5s ease-in-out infinite;
+  pointer-events: none;
+}
+@supports (animation-timeline: view()) {
+  .landing-page section > .landing-container,
+  .landing-page section > div {
+    animation-timeline: view();
+    animation-range: entry 8% cover 32%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-page *,
+  .landing-page *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}

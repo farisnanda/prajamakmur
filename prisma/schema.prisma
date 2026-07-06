@@ -13,6 +13,7 @@ enum Role {
   PENGURUS
   ANGGOTA
   AUDITOR
+  KETUA_KOPERASI
 }
 
 enum EmploymentStatus {
@@ -30,6 +31,169 @@ enum SavingsType {
 enum SavingsTransactionType {
   SETORAN
   PENARIKAN
+}
+enum WithdrawalStatus {
+  SUBMITTED
+  TRANSFERRED
+}
+enum CashTransactionType {
+  INFLOW
+  OUTFLOW
+}
+enum OperationalExpenseCategory {
+  KESEJAHTERAAN_MANAJER
+  KESEJAHTERAAN_PEGAWAI
+  MAKAN_MINUM
+  BANTUAN_TRANSPORTASI
+  HONORARIUM_NARASUMBER
+  HONORARIUM_SIDANG
+}
+model CashAccount {
+  id String @id @default(cuid())
+  code String @unique
+  name String
+  balance Decimal @default(0) @db.Decimal(18,2)
+  transactions CashTransaction[]
+  expenses OperationalExpense[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("cash_accounts")
+}
+model CashTransaction {
+  id String @id @default(cuid())
+  reference String @unique
+  accountId String
+  account CashAccount @relation(fields:[accountId],references:[id],onDelete:Restrict)
+  type CashTransactionType
+  amount Decimal @db.Decimal(18,2)
+  transactionDate DateTime @default(now())
+  description String
+  note String?
+  createdAt DateTime @default(now())
+  @@index([accountId,transactionDate])
+  @@map("cash_transactions")
+}
+model OperationalExpense {
+  id String @id @default(cuid())
+  expenseNumber String @unique
+  category OperationalExpenseCategory
+  accountId String
+  account CashAccount @relation(fields:[accountId],references:[id],onDelete:Restrict)
+  amount Decimal @db.Decimal(18,2)
+  transactionDate DateTime @default(now())
+  recipient String?
+  description String
+  note String?
+  createdAt DateTime @default(now())
+  @@index([transactionDate,category])
+  @@map("operational_expenses")
+}
+model BusinessIncome {
+  id String @id @default(cuid())
+  reference String @unique
+  loanId String
+  loan Loan @relation(fields:[loanId],references:[id],onDelete:Restrict)
+  loanPaymentId String? @unique
+  loanPayment LoanPayment? @relation(fields:[loanPaymentId],references:[id],onDelete:Restrict)
+  amount Decimal @db.Decimal(18,2)
+  recognizedAt DateTime @default(now())
+  description String
+  createdAt DateTime @default(now())
+  @@index([recognizedAt])
+  @@map("business_income")
+}
+
+model SavingsWithdrawalRequest {
+  id String @id @default(cuid())
+  requestNumber String @unique
+  memberId String
+  member Member @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  amount Decimal @db.Decimal(18,2)
+  bankName String
+  accountNumber String
+  accountHolder String
+  note String?
+  status WithdrawalStatus @default(SUBMITTED)
+  transferReference String?
+  transferredAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([status, createdAt])
+  @@map("savings_withdrawal_requests")
+}
+
+model BookkeepingEntry {
+  id String @id @default(cuid())
+  reference String @unique
+  transactionDate DateTime @default(now())
+  description String
+  debitAccount String
+  creditAccount String
+  amount Decimal @db.Decimal(18,2)
+  createdAt DateTime @default(now())
+  @@index([transactionDate])
+  @@map("bookkeeping_entries")
+}
+
+enum LoanStatus {
+  SUBMITTED
+  SALARY_TREASURER_APPROVED
+  FINAL_APPROVED
+  ACTIVE
+  REJECTED
+  LUNAS
+}
+
+model Loan {
+  id              String     @id @default(cuid())
+  loanNumber      String     @unique
+  memberId        String
+  member          Member     @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  principalAmount Decimal    @db.Decimal(18, 2)
+  interestRate    Decimal    @default(0) @db.Decimal(5, 2)
+  tenureMonths    Int
+  monthlyPayment  Decimal?   @db.Decimal(18, 2)
+  purpose         String
+  applicationDate DateTime   @default(now())
+  approvedAt      DateTime?
+  salaryTreasurerApprovedAt DateTime?
+  finalApprovedAt DateTime?
+  disbursedAt     DateTime?
+  transferReference String?
+  rejectionNote   String?
+  rejectedAt      DateTime?
+  startDate       DateTime?
+  dueDate         DateTime?
+  status          LoanStatus @default(SUBMITTED)
+  note            String?
+  createdById     String
+  createdBy       User       @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  payments        LoanPayment[]
+  businessIncome  BusinessIncome[]
+
+  @@index([status, applicationDate])
+  @@index([memberId])
+  @@map("loans")
+}
+
+model LoanPayment {
+  id            String   @id @default(cuid())
+  receiptNumber String   @unique
+  loanId        String
+  loan          Loan     @relation(fields: [loanId], references: [id], onDelete: Restrict)
+  amount        Decimal  @db.Decimal(18, 2)
+  principalComponent Decimal @default(0) @db.Decimal(18, 2)
+  interestComponent Decimal @default(0) @db.Decimal(18, 2)
+  paymentDate   DateTime @default(now())
+  periodKey     String?
+  note          String?
+  createdAt     DateTime @default(now())
+  businessIncome BusinessIncome?
+
+  @@index([loanId, paymentDate])
+  @@unique([loanId, periodKey])
+  @@map("loan_payments")
 }
 
 model SavingsSetting {
@@ -77,6 +241,9 @@ model Member {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   savings          SavingsTransaction[]
+  loans            Loan[]
+  user             User?
+  withdrawalRequests SavingsWithdrawalRequest[]
 
   @@index([name])
   @@index([employmentStatus])
@@ -90,10 +257,35 @@ model User {
   password  String
   role      Role     @default(ANGGOTA)
   isActive  Boolean  @default(true)
+  memberId String?   @unique
+  member   Member?   @relation(fields: [memberId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   savingsTransactions SavingsTransaction[]
+  loansCreated        Loan[]
 
   @@map("users")
+}
+
+model LandingContent {
+  id String @id @default("default")
+  content Json
+  updatedAt DateTime @updatedAt
+  @@map("landing_content")
+}
+
+model NewsPost {
+  id String @id @default(cuid())
+  title String
+  slug String @unique
+  excerpt String
+  content String
+  imageUrl String
+  eventDate DateTime
+  isPublished Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([isPublished,eventDate])
+  @@map("news_posts")
 }

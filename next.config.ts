@@ -12,6 +12,9 @@ if (process.env.AUTH_URL && !process.env.NEXTAUTH_URL) {
 const nextConfig: NextConfig = {
   basePath,
   assetPrefix: basePath,
+  experimental: {
+    serverActions: { bodySizeLimit: "40mb" },
+  },
 };
 
 export default nextConfig;

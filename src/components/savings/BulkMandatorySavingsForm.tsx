@@ -2,7 +2,10 @@
 
 import { useActionState, useMemo, useState } from "react";
 import { CheckSquare, LoaderCircle, Search, Users, X } from "lucide-react";
-import { createBulkMandatorySavings, type BulkMandatorySavingsState } from "@/app/simpanan/actions";
+import {
+  createBulkMandatorySavings,
+  type BulkMandatorySavingsState,
+} from "@/app/simpanan/actions";
 
 type MemberOption = {
   id: string;
@@ -12,7 +15,8 @@ type MemberOption = {
 };
 
 const initialState: BulkMandatorySavingsState = {};
-const inputClass = "mt-2 h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100";
+const inputClass =
+  "mt-2 h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100";
 const currentLocalDate = () => {
   const now = new Date();
   const offset = now.getTimezoneOffset() * 60000;
@@ -25,13 +29,24 @@ const employmentLabel: Record<MemberOption["employmentStatus"], string> = {
   PPPK_PARUH_WAKTU: "PPPK Paruh Waktu",
 };
 
-export function BulkMandatorySavingsForm({ members }: { members: MemberOption[] }) {
-  const [state, formAction, pending] = useActionState(createBulkMandatorySavings, initialState);
+export function BulkMandatorySavingsForm({
+  members,
+}: {
+  members: MemberOption[];
+}) {
+  const [state, formAction, pending] = useActionState(
+    createBulkMandatorySavings,
+    initialState,
+  );
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [selectedIds, setSelectedIds] = useState<string[]>(members.map((member) => member.id));
+  const [selectedIds, setSelectedIds] = useState<string[]>(
+    members.map((member) => member.id),
+  );
   const [period, setPeriod] = useState(currentLocalDate().slice(0, 7));
-  const [transactionDate, setTransactionDate] = useState(currentLocalDate().slice(0, 10));
+  const [transactionDate, setTransactionDate] = useState(
+    currentLocalDate().slice(0, 10),
+  );
 
   const filteredMembers = useMemo(() => {
     const keyword = query.trim().toLowerCase();
@@ -45,10 +60,16 @@ export function BulkMandatorySavingsForm({ members }: { members: MemberOption[] 
   }, [members, query]);
 
   const filteredIds = filteredMembers.map((member) => member.id);
-  const allFilteredChecked = filteredIds.length > 0 && filteredIds.every((id) => selectedIds.includes(id));
+  const allFilteredChecked =
+    filteredIds.length > 0 &&
+    filteredIds.every((id) => selectedIds.includes(id));
 
   const toggleMember = (id: string) => {
-    setSelectedIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+    setSelectedIds((current) =>
+      current.includes(id)
+        ? current.filter((item) => item !== id)
+        : [...current, id],
+    );
   };
 
   const toggleAllFiltered = () => {
@@ -78,8 +99,13 @@ export function BulkMandatorySavingsForm({ members }: { members: MemberOption[] 
           <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-[32px] bg-white shadow-2xl">
             <div className="flex items-start justify-between border-b border-slate-100 px-7 py-6">
               <div>
-                <h3 className="text-xl font-bold text-slate-900">Simpanan Wajib Bulanan</h3>
-                <p className="mt-1 text-sm text-slate-500">Pilih tanggal transaksi lalu tentukan anggota yang akan dicatat.</p>
+                <h3 className="text-xl font-bold text-slate-900">
+                  Simpanan Wajib Bulanan
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Pilih tanggal transaksi lalu tentukan anggota yang akan
+                  dicatat.
+                </p>
               </div>
               <button
                 type="button"
@@ -91,23 +117,52 @@ export function BulkMandatorySavingsForm({ members }: { members: MemberOption[] 
               </button>
             </div>
 
-            <form action={formAction}>
+            <form data-financial-transaction action={formAction}>
               <div className="space-y-6 px-7 py-6">
                 {state.message && (
-                  <p role="alert" className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                  <p
+                    role="alert"
+                    className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700"
+                  >
                     {state.message}
                   </p>
                 )}
 
                 <div className="grid gap-5 md:grid-cols-3">
-                  <Field label="Periode Bulan" error={state.errors?.period?.[0]}>
-                    <input name="period" type="month" className={inputClass} value={period} onChange={(event) => setPeriod(event.target.value)} required />
+                  <Field
+                    label="Periode Bulan"
+                    error={state.errors?.period?.[0]}
+                  >
+                    <input
+                      name="period"
+                      type="month"
+                      className={inputClass}
+                      value={period}
+                      onChange={(event) => setPeriod(event.target.value)}
+                      required
+                    />
                   </Field>
-                  <Field label="Tanggal Transaksi" error={state.errors?.transactionDate?.[0]}>
-                    <input name="transactionDate" type="date" className={inputClass} value={transactionDate} onChange={(event) => setTransactionDate(event.target.value)} required />
+                  <Field
+                    label="Tanggal Transaksi"
+                    error={state.errors?.transactionDate?.[0]}
+                  >
+                    <input
+                      name="transactionDate"
+                      type="date"
+                      className={inputClass}
+                      value={transactionDate}
+                      onChange={(event) =>
+                        setTransactionDate(event.target.value)
+                      }
+                      required
+                    />
                   </Field>
                   <Field label="Catatan">
-                    <input name="note" className={inputClass} placeholder="Opsional, mis. potongan gaji bulan ini" />
+                    <input
+                      name="note"
+                      className={inputClass}
+                      placeholder="Opsional, mis. potongan gaji bulan ini"
+                    />
                   </Field>
                 </div>
 
@@ -118,14 +173,19 @@ export function BulkMandatorySavingsForm({ members }: { members: MemberOption[] 
                         <Users size={20} />
                       </div>
                       <div>
-                        <p className="font-bold text-slate-900">{selectedIds.length} anggota dipilih</p>
+                        <p className="font-bold text-slate-900">
+                          {selectedIds.length} anggota dipilih
+                        </p>
                         <p>{filteredMembers.length} anggota tampil di daftar</p>
                       </div>
                     </div>
 
                     <div className="flex flex-1 flex-col gap-3 md:max-w-xl md:flex-row">
                       <label className="relative block flex-1">
-                        <Search size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <Search
+                          size={18}
+                          className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                        />
                         <input
                           value={query}
                           onChange={(event) => setQuery(event.target.value)}
@@ -139,7 +199,9 @@ export function BulkMandatorySavingsForm({ members }: { members: MemberOption[] 
                         onClick={toggleAllFiltered}
                         className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-100"
                       >
-                        {allFilteredChecked ? "Batalkan Centang Tampil" : "Centang Semua Tampil"}
+                        {allFilteredChecked
+                          ? "Batalkan Centang Tampil"
+                          : "Centang Semua Tampil"}
                       </button>
                     </div>
                   </div>
@@ -164,9 +226,12 @@ export function BulkMandatorySavingsForm({ members }: { members: MemberOption[] 
                                 className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                               />
                               <div className="min-w-0">
-                                <p className="font-bold text-slate-900">{member.name}</p>
+                                <p className="font-bold text-slate-900">
+                                  {member.name}
+                                </p>
                                 <p className="text-sm text-slate-500">
-                                  {member.memberNumber} · {employmentLabel[member.employmentStatus]}
+                                  {member.memberNumber} ·{" "}
+                                  {employmentLabel[member.employmentStatus]}
                                 </p>
                               </div>
                             </label>
@@ -179,12 +244,19 @@ export function BulkMandatorySavingsForm({ members }: { members: MemberOption[] 
                       </div>
                     )}
                   </div>
-                  {state.errors?.memberIds?.[0] && <p className="mt-3 text-xs font-semibold text-red-600">{state.errors.memberIds[0]}</p>}
+                  {state.errors?.memberIds?.[0] && (
+                    <p className="mt-3 text-xs font-semibold text-red-600">
+                      {state.errors.memberIds[0]}
+                    </p>
+                  )}
                 </div>
               </div>
 
               <div className="flex items-center justify-between border-t border-slate-100 px-7 py-5">
-                <p className="text-sm text-slate-500">Anggota yang sudah tercatat pada periode yang sama akan otomatis dilewati.</p>
+                <p className="text-sm text-slate-500">
+                  Anggota yang sudah tercatat pada periode yang sama akan
+                  otomatis dilewati.
+                </p>
                 <div className="flex gap-3">
                   <button
                     type="button"
@@ -197,7 +269,11 @@ export function BulkMandatorySavingsForm({ members }: { members: MemberOption[] 
                     disabled={pending || !selectedIds.length}
                     className="flex h-12 items-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {pending ? <LoaderCircle size={18} className="animate-spin" /> : <CheckSquare size={18} />}
+                    {pending ? (
+                      <LoaderCircle size={18} className="animate-spin" />
+                    ) : (
+                      <CheckSquare size={18} />
+                    )}
                     {pending ? "Menyimpan..." : "Catat Sekarang"}
                   </button>
                 </div>
@@ -210,12 +286,24 @@ export function BulkMandatorySavingsForm({ members }: { members: MemberOption[] 
   );
 }
 
-function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+function Field({
+  label,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
   return (
     <label className="block text-sm font-semibold text-slate-700">
       {label}
       {children}
-      {error && <span className="mt-1 block text-xs font-medium text-red-600">{error}</span>}
+      {error && (
+        <span className="mt-1 block text-xs font-medium text-red-600">
+          {error}
+        </span>
+      )}
     </label>
   );
 }

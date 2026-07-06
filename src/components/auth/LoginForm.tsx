@@ -31,11 +31,24 @@ export function LoginForm() {
     }
 
     const callbackUrl = searchParams.get("callbackUrl");
-    const destination = callbackUrl?.startsWith("/prajamakmur/")
-      ? callbackUrl.slice("/prajamakmur".length)
-      : "/dashboard";
-
-    router.push(destination);
+    let destination = "/dashboard";
+    if (callbackUrl) {
+      try {
+        const pathname = callbackUrl.startsWith("http")
+          ? new URL(callbackUrl).pathname
+          : callbackUrl;
+        const normalized = pathname.replace(/^(\/prajamakmur)+/, "");
+        if (
+          normalized.startsWith("/") &&
+          !normalized.startsWith("//") &&
+          normalized !== "/login"
+        )
+          destination = normalized;
+      } catch {
+        /* Callback tidak valid: gunakan dashboard. */
+      }
+    }
+    router.replace(destination);
     router.refresh();
   }
 
@@ -64,7 +77,10 @@ export function LoginForm() {
 
       <div>
         <div className="mb-2 flex items-center justify-between gap-4">
-          <label htmlFor="password" className="text-sm font-semibold text-slate-700">
+          <label
+            htmlFor="password"
+            className="text-sm font-semibold text-slate-700"
+          >
             Kata sandi
           </label>
           <span className="text-right text-xs font-medium text-slate-400">
@@ -85,7 +101,9 @@ export function LoginForm() {
           <button
             type="button"
             onClick={() => setShowPassword((value) => !value)}
-            aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
+            aria-label={
+              showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"
+            }
             className="text-slate-400 transition hover:text-blue-600"
           >
             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}

@@ -9,6 +9,7 @@ const roleLabels = {
   PENGURUS: "Pengurus",
   ANGGOTA: "Anggota",
   AUDITOR: "Auditor",
+  KETUA_KOPERASI: "Ketua Koperasi",
 };
 
 export function Topbar({

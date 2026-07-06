@@ -10,7 +10,19 @@ const credentialsSchema = z.object({
 });
 
 export const authOptions: NextAuthOptions = {
+  secret: process.env.AUTH_SECRET,
   session: { strategy: "jwt" },
+  cookies: {
+    sessionToken: {
+      name: "praja-makmur.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+  },
   pages: { signIn: "/login" },
   providers: [
     CredentialsProvider({

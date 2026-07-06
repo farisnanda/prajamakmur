@@ -6,7 +6,7 @@ const globalForPrisma = globalThis as unknown as {
   prismaSchemaVersion: string | undefined;
 };
 
-const prismaSchemaVersion = "2026-06-30-savings-v2";
+const prismaSchemaVersion = "2026-07-02-business-income-v1";
 
 function createPrismaClient() {
   return new PrismaClient({

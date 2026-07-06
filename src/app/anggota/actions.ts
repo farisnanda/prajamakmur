@@ -12,7 +12,10 @@ const allowedRoles = new Set(["SUPER_ADMIN", "ADMIN_KOPERASI", "PENGURUS"]);
 
 const memberSchema = z.object({
   memberNumber: z.string().trim().min(1, "Nomor anggota wajib diisi."),
-  nik: z.string().trim().regex(/^\d{16}$/, "NIK harus terdiri dari 16 angka."),
+  nik: z
+    .string()
+    .trim()
+    .regex(/^\d{16}$/, "NIK harus terdiri dari 16 angka."),
   employeeNumber: z.string().trim().optional(),
   name: z.string().trim().min(3, "Nama minimal 3 karakter."),
   employmentStatus: z.enum(["PNS", "PPPK", "PPPK_PARUH_WAKTU"]),
@@ -49,7 +52,10 @@ function parseMember(formData: FormData) {
 }
 
 function databaseError(error: unknown): MemberFormState {
-  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+  if (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002"
+  ) {
     return { message: "Nomor anggota, NIK, atau NIP/NI PPPK sudah digunakan." };
   }
   return { message: "Data belum dapat disimpan. Silakan coba lagi." };

@@ -33,17 +33,28 @@ export default async function LoginPage() {
             Kelola koperasi lebih mudah, transparan, dan terpercaya.
           </h1>
           <p className="mt-6 max-w-lg text-lg leading-8 text-blue-100">
-            Satu ruang kerja untuk anggota, simpanan, pinjaman, akuntansi, dan laporan Praja Makmur.
+            Satu ruang kerja untuk anggota, simpanan, pinjaman, akuntansi, dan
+            laporan Praja Makmur.
           </p>
           <div className="mt-10 grid max-w-lg grid-cols-2 gap-4 text-sm font-semibold text-blue-50">
-            <span className="flex items-center gap-2"><CheckCircle2 size={18} /> Data terpusat</span>
-            <span className="flex items-center gap-2"><CheckCircle2 size={18} /> Laporan real-time</span>
-            <span className="flex items-center gap-2"><CheckCircle2 size={18} /> Akses berbasis peran</span>
-            <span className="flex items-center gap-2"><CheckCircle2 size={18} /> Transaksi tercatat</span>
+            <span className="flex items-center gap-2">
+              <CheckCircle2 size={18} /> Data terpusat
+            </span>
+            <span className="flex items-center gap-2">
+              <CheckCircle2 size={18} /> Laporan real-time
+            </span>
+            <span className="flex items-center gap-2">
+              <CheckCircle2 size={18} /> Akses berbasis peran
+            </span>
+            <span className="flex items-center gap-2">
+              <CheckCircle2 size={18} /> Transaksi tercatat
+            </span>
           </div>
         </div>
 
-        <p className="relative z-10 text-sm text-blue-200">© 2026 Koperasi Praja Makmur</p>
+        <p className="relative z-10 text-sm text-blue-200">
+          © 2026 Koperasi Praja Makmur
+        </p>
       </section>
 
       <section className="flex flex-1 items-center justify-center px-6 py-12 sm:px-12">
@@ -64,10 +75,13 @@ export default async function LoginPage() {
           <h2 className="mt-6 text-3xl font-bold tracking-tight text-slate-950">
             Selamat datang kembali
           </h2>
-          <p className="mt-2 text-slate-500">Masuk menggunakan akun Praja Makmur Anda.</p>
+          <p className="mt-2 text-slate-500">
+            Masuk menggunakan akun Praja Makmur Anda.
+          </p>
           <LoginForm />
           <p className="mt-8 text-center text-xs leading-5 text-slate-400">
-            Dengan masuk, Anda menyetujui kebijakan keamanan dan penggunaan sistem koperasi.
+            Dengan masuk, Anda menyetujui kebijakan keamanan dan penggunaan
+            sistem koperasi.
           </p>
         </div>
       </section>
