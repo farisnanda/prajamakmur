@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
+import { KAS_UMUM_BANK } from "@/lib/cashAccounts";
 import { prisma } from "@/lib/prisma";
 
 export type LoanFormState = {
@@ -132,7 +133,7 @@ export async function approveByChairman(formData: FormData) {
   );
   const [cash, reserved] = await Promise.all([
     prisma.cashAccount.findUnique({
-      where: { code: "KAS_UMUM" },
+      where: { code: KAS_UMUM_BANK },
       select: { balance: true },
     }),
     prisma.loan.aggregate({
@@ -216,7 +217,7 @@ export async function disburseLoan(formData: FormData) {
   const due = new Date(start);
   due.setMonth(due.getMonth() + loan.tenureMonths);
   const cashBefore = await prisma.cashAccount.findUnique({
-    where: { code: "KAS_UMUM" },
+    where: { code: KAS_UMUM_BANK },
     select: { balance: true },
   });
   if (!cashBefore || cashBefore.balance.toNumber() < principal)
@@ -225,7 +226,7 @@ export async function disburseLoan(formData: FormData) {
     );
   await prisma.$transaction(async (tx) => {
     const cash = await tx.cashAccount.findUnique({
-      where: { code: "KAS_UMUM" },
+      where: { code: KAS_UMUM_BANK },
     });
     if (!cash || cash.balance.toNumber() < principal)
       throw new Error(

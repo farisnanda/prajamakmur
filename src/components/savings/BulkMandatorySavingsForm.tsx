@@ -128,7 +128,7 @@ export function BulkMandatorySavingsForm({
                   </p>
                 )}
 
-                <div className="grid gap-5 md:grid-cols-3">
+                <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
                   <Field
                     label="Periode Bulan"
                     error={state.errors?.period?.[0]}
@@ -156,6 +156,19 @@ export function BulkMandatorySavingsForm({
                       }
                       required
                     />
+                  </Field>
+                  <Field
+                    label="Tempat Uang"
+                    error={state.errors?.cashChannel?.[0]}
+                  >
+                    <select
+                      name="cashChannel"
+                      className={inputClass}
+                      defaultValue="BANK"
+                    >
+                      <option value="BANK">Rekening Bank</option>
+                      <option value="TUNAI">Uang Tunai (Cash)</option>
+                    </select>
                   </Field>
                   <Field label="Catatan">
                     <input

@@ -80,7 +80,7 @@ export default async function Page({
       <Topbar
         user={s.user}
         title="Arus Kas"
-        subtitle="Saldo dan pencatatan enam rekening kas koperasi"
+        subtitle="Saldo dan pencatatan seluruh rekening kas koperasi"
       />
       <main className="ml-[280px] min-h-screen bg-slate-50 px-8 pb-10 pt-32">
         <section className="grid grid-cols-3 gap-4">

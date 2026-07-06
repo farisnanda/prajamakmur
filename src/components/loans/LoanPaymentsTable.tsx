@@ -349,13 +349,26 @@ function PayLoanModal({
   const [loanId, setLoanId] = useState(borrower.loans[0]?.id ?? "");
   const loan =
     borrower.loans.find((item) => item.id === loanId) ?? borrower.loans[0];
-  const remainingCount = loan ? loan.tenureMonths - loan.paymentCount : 0;
+  // Jumlah pembayaran tersisa dihitung dari sisa kewajiban, bukan sekadar
+  // tenor dikurangi jumlah pembayaran, agar sisa akibat pembayaran parsial
+  // tetap bisa dilunasi meski nomor angsuran sudah melewati tenor.
+  const remainingCount =
+    loan && loan.installment > 0
+      ? Math.ceil(Math.max(0, loan.outstanding) / loan.installment)
+      : 0;
   const installmentNumbers = loan
     ? Array.from(
         { length: remainingCount },
         (_, index) => loan.paymentCount + index + 1,
       )
     : [];
+  const rowAmount = (index: number) =>
+    loan
+      ? Math.min(
+          loan.installment,
+          Math.max(0, loan.outstanding - loan.installment * index),
+        )
+      : 0;
   const [selected, setSelected] = useState<number[]>([]);
   const toggleInstallment = (installmentNumber: number) =>
     setSelected((current) =>
@@ -432,7 +445,7 @@ function PayLoanModal({
               </button>
             </div>
             <div className="mt-3 max-h-56 overflow-y-auto rounded-xl border border-slate-200">
-              {installmentNumbers.map((installmentNumber) => (
+              {installmentNumbers.map((installmentNumber, index) => (
                 <label
                   key={installmentNumber}
                   className="flex cursor-pointer items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0"
@@ -446,11 +459,13 @@ function PayLoanModal({
                       onChange={() => toggleInstallment(installmentNumber)}
                     />
                     <span className="font-semibold text-slate-800">
-                      Angsuran ke-{installmentNumber}/{loan?.tenureMonths}
+                      {installmentNumber > (loan?.tenureMonths ?? 0)
+                        ? "Pelunasan sisa kewajiban"
+                        : `Angsuran ke-${installmentNumber}/${loan?.tenureMonths}`}
                     </span>
                   </span>
                   <span className="text-sm font-bold text-blue-700">
-                    {rupiah(loan?.installment ?? 0)}
+                    {rupiah(rowAmount(index))}
                   </span>
                 </label>
               ))}

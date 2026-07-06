@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
+import { cashChannelCode } from "@/lib/cashAccounts";
 import { prisma } from "@/lib/prisma";
 
 export type SavingsFormState = {
@@ -21,6 +22,7 @@ const schema = z.object({
   memberId: z.string().min(1, "Pilih anggota."),
   savingsType: z.enum(["POKOK", "WAJIB", "SUKARELA"]),
   transactionType: z.enum(["SETORAN", "PENARIKAN"]),
+  cashChannel: z.enum(["BANK", "TUNAI"]),
   amount: z.coerce.number().positive("Nominal harus lebih dari nol."),
   period: z.string().optional(),
   transactionDate: z.coerce.date(),
@@ -30,6 +32,7 @@ const schema = z.object({
 const bulkMandatorySchema = z.object({
   transactionDate: z.coerce.date(),
   period: z.string().regex(/^\d{4}-\d{2}$/, "Periode wajib diisi."),
+  cashChannel: z.enum(["BANK", "TUNAI"]),
   note: z.string().trim().optional(),
   memberIds: z.array(z.string().min(1)).min(1, "Pilih minimal satu anggota."),
 });
@@ -124,14 +127,14 @@ export async function createSavingsTransaction(
     const receiptNumber = `TRX-${Date.now()}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
     await prisma.$transaction(async (tx) => {
       const cash = await tx.cashAccount.findUnique({
-        where: { code: "KAS_UMUM" },
+        where: { code: cashChannelCode(data.cashChannel) },
       });
-      if (!cash) throw new Error("Kas Umum belum tersedia.");
+      if (!cash) throw new Error("Rekening kas belum tersedia.");
       if (
         data.transactionType === "PENARIKAN" &&
         cash.balance.toNumber() < data.amount
       )
-        throw new Error("Saldo Kas Umum tidak mencukupi.");
+        throw new Error(`Saldo ${cash.name} tidak mencukupi.`);
       await tx.savingsTransaction.create({
         data: {
           receiptNumber,
@@ -214,6 +217,7 @@ export async function createBulkMandatorySavings(
   const parsed = bulkMandatorySchema.safeParse({
     transactionDate: formData.get("transactionDate"),
     period: formData.get("period"),
+    cashChannel: formData.get("cashChannel"),
     note: formData.get("note"),
     memberIds: formData.getAll("memberIds"),
   });
@@ -274,9 +278,9 @@ export async function createBulkMandatorySavings(
     batchRef = `WAJIB-${data.period}-${Date.now()}`;
   await prisma.$transaction(async (tx) => {
     const cash = await tx.cashAccount.findUnique({
-      where: { code: "KAS_UMUM" },
+      where: { code: cashChannelCode(data.cashChannel) },
     });
-    if (!cash) throw new Error("Kas Umum belum tersedia.");
+    if (!cash) throw new Error("Rekening kas belum tersedia.");
     await tx.savingsTransaction.createMany({ data: rows });
     await tx.cashAccount.update({
       where: { id: cash.id },

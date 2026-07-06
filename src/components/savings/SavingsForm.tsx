@@ -114,6 +114,12 @@ export function SavingsForm({
             )}
           </select>
         </Field>
+        <Field label="Tempat Uang" error={state.errors?.cashChannel?.[0]}>
+          <select name="cashChannel" className={inputClass} defaultValue="BANK">
+            <option value="BANK">Rekening Bank</option>
+            <option value="TUNAI">Uang Tunai (Cash)</option>
+          </select>
+        </Field>
         <Field label="Nominal" error={state.errors?.amount?.[0]}>
           <MoneyInput
             key={`${type}-${fixedAmount ?? "free"}`}

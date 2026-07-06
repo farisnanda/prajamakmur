@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
+import { KAS_UMUM_BANK } from "@/lib/cashAccounts";
 import { prisma } from "@/lib/prisma";
 export async function markWithdrawalTransferred(formData: FormData) {
   const session = await getServerSession(authOptions);
@@ -27,10 +28,10 @@ export async function markWithdrawalTransferred(formData: FormData) {
     redirect("/simpanan/sukarela/penarikan?error=invalid");
   await prisma.$transaction(async (tx) => {
     const cash = await tx.cashAccount.findUnique({
-      where: { code: "KAS_UMUM" },
+      where: { code: KAS_UMUM_BANK },
     });
     if (!cash || cash.balance.lessThan(request.amount))
-      throw new Error("Saldo Kas Umum tidak mencukupi.");
+      throw new Error("Saldo Kas Umum - Rekening Bank tidak mencukupi.");
     await tx.savingsTransaction.create({
       data: {
         receiptNumber: `TRX-${Date.now()}-${crypto.randomUUID().slice(0, 5).toUpperCase()}`,

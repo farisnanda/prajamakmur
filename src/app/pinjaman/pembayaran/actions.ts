@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
+import { KAS_UMUM_BANK } from "@/lib/cashAccounts";
 import { prisma } from "@/lib/prisma";
 
 function allocateAnnuity(
@@ -65,7 +66,7 @@ export async function createLoanInstallmentPayments(formData: FormData) {
   if (!parsed.success) redirect("/pinjaman/pembayaran?error=invalid");
   const loan = await prisma.loan.findUnique({
     where: { id: parsed.data.loanId },
-    include: { payments: true },
+    include: { payments: true, member: { select: { name: true } } },
   });
   if (!loan || loan.status !== "ACTIVE" || !loan.monthlyPayment)
     redirect("/pinjaman/pembayaran?error=invalid");
@@ -118,9 +119,9 @@ export async function createLoanInstallmentPayments(formData: FormData) {
   const totalAmount = rows.reduce((sum, row) => sum + row.amount.toNumber(), 0);
   await prisma.$transaction(async (tx) => {
     const cash = await tx.cashAccount.findUnique({
-      where: { code: "KAS_UMUM" },
+      where: { code: KAS_UMUM_BANK },
     });
-    if (!cash) throw new Error("Kas Umum belum tersedia.");
+    if (!cash) throw new Error("Kas Umum - Rekening Bank belum tersedia.");
     for (const row of rows) {
       const payment = await tx.loanPayment.create({ data: row });
       const interest = row.interestComponent.toNumber();
@@ -135,21 +136,34 @@ export async function createLoanInstallmentPayments(formData: FormData) {
             description: `Bunga jasa angsuran ${loan.loanNumber}`,
           },
         });
+      if (row.principalComponent.toNumber() > 0)
+        await tx.cashTransaction.create({
+          data: {
+            reference: `KAS-POKOK-${row.receiptNumber}`,
+            accountId: cash.id,
+            type: "INFLOW",
+            amount: row.principalComponent,
+            transactionDate: row.paymentDate,
+            description: `Pembayaran Pokok Pinjaman ${loan.member.name} angsuran ke-${row.installmentNumber}`,
+            note: row.note,
+          },
+        });
+      if (interest > 0)
+        await tx.cashTransaction.create({
+          data: {
+            reference: `KAS-BUNGA-${row.receiptNumber}`,
+            accountId: cash.id,
+            type: "INFLOW",
+            amount: row.interestComponent,
+            transactionDate: row.paymentDate,
+            description: `Pembayaran Bunga Pinjaman ${loan.member.name} angsuran ke-${row.installmentNumber}`,
+            note: row.note,
+          },
+        });
     }
     await tx.cashAccount.update({
       where: { id: cash.id },
       data: { balance: { increment: totalAmount } },
-    });
-    await tx.cashTransaction.create({
-      data: {
-        reference: `KAS-ANGSURAN-${loan.loanNumber}-${Date.now()}`,
-        accountId: cash.id,
-        type: "INFLOW",
-        amount: new Prisma.Decimal(totalAmount),
-        transactionDate: parsed.data.paymentDate,
-        description: `Pembayaran ${rows.length} angsuran pinjaman ${loan.loanNumber}`,
-        note: parsed.data.note || null,
-      },
     });
     if (paid >= total - 1)
       await tx.loan.update({
@@ -196,6 +210,7 @@ export async function createBulkLoanPayments(formData: FormData) {
       interestRate: true,
       tenureMonths: true,
       monthlyPayment: true,
+      member: { select: { name: true } },
       payments: { select: { amount: true, principalComponent: true } },
     },
   });
@@ -248,9 +263,9 @@ export async function createBulkLoanPayments(formData: FormData) {
   if (rows.length)
     await prisma.$transaction(async (tx) => {
       const cash = await tx.cashAccount.findUnique({
-        where: { code: "KAS_UMUM" },
+        where: { code: KAS_UMUM_BANK },
       });
-      if (!cash) throw new Error("Kas Umum belum tersedia.");
+      if (!cash) throw new Error("Kas Umum - Rekening Bank belum tersedia.");
       let totalIn = 0;
       for (const row of rows) {
         const payment = await tx.loanPayment.create({ data: row });
@@ -265,6 +280,30 @@ export async function createBulkLoanPayments(formData: FormData) {
               amount: row.interestComponent,
               recognizedAt: row.paymentDate,
               description: `Bunga jasa angsuran pinjaman`,
+            },
+          });
+        if (row.principalComponent.toNumber() > 0)
+          await tx.cashTransaction.create({
+            data: {
+              reference: `KAS-POKOK-${row.receiptNumber}`,
+              accountId: cash.id,
+              type: "INFLOW",
+              amount: row.principalComponent,
+              transactionDate: row.paymentDate,
+              description: `Pembayaran Pokok Pinjaman ${loan.member.name} angsuran ke-${row.installmentNumber}`,
+              note: row.note,
+            },
+          });
+        if (row.interestComponent.toNumber() > 0)
+          await tx.cashTransaction.create({
+            data: {
+              reference: `KAS-BUNGA-${row.receiptNumber}`,
+              accountId: cash.id,
+              type: "INFLOW",
+              amount: row.interestComponent,
+              transactionDate: row.paymentDate,
+              description: `Pembayaran Bunga Pinjaman ${loan.member.name} angsuran ke-${row.installmentNumber}`,
+              note: row.note,
             },
           });
         const previous = loan.payments.reduce(
@@ -283,17 +322,6 @@ export async function createBulkLoanPayments(formData: FormData) {
       await tx.cashAccount.update({
         where: { id: cash.id },
         data: { balance: { increment: totalIn } },
-      });
-      await tx.cashTransaction.create({
-        data: {
-          reference: `KAS-ANGSURAN-${parsed.data.period}-${Date.now()}`,
-          accountId: cash.id,
-          type: "INFLOW",
-          amount: new Prisma.Decimal(totalIn),
-          transactionDate: parsed.data.paymentDate,
-          description: `Pembayaran pinjaman serentak ${parsed.data.period}`,
-          note: parsed.data.note || null,
-        },
       });
     });
   revalidatePath("/pinjaman/pembayaran");

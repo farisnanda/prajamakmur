@@ -17,6 +17,7 @@ import {
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { authOptions } from "@/lib/auth";
+import { KAS_UMUM_BANK } from "@/lib/cashAccounts";
 import { prisma } from "@/lib/prisma";
 
 const rupiah = (value: number) =>
@@ -87,7 +88,7 @@ export default async function LoansPage({
       orderBy: { startDate: "desc" },
     }),
     prisma.cashAccount.findUnique({
-      where: { code: "KAS_UMUM" },
+      where: { code: KAS_UMUM_BANK },
       select: { balance: true },
     }),
     prisma.loan.aggregate({
