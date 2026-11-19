@@ -19,7 +19,7 @@ import {
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 25;
 const rupiah = (value: number) =>
   new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -164,7 +164,7 @@ export default async function LoanPaymentsPage({
     `/pinjaman/pembayaran?page=${target}${keyword ? `&q=${encodeURIComponent(keyword)}` : ""}${bulanFilter ? `&bulan=${bulanFilter}` : ""}`;
   const recentPayments = await prisma.loanPayment.findMany({
     where: paymentDateRange ? { paymentDate: paymentDateRange } : undefined,
-    take: bulanFilter ? 200 : 10,
+    take: bulanFilter ? 200 : 25,
     orderBy: { paymentDate: "desc" },
     select: {
       id: true,
@@ -231,7 +231,7 @@ export default async function LoanPaymentsPage({
                 Daftar Anggota yang Memiliki Kewajiban
               </h3>
               <p className="text-sm text-slate-500">
-                Maksimal 10 peminjam per halaman
+                Maksimal 25 peminjam per halaman
               </p>
             </div>
             <form className="flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4">

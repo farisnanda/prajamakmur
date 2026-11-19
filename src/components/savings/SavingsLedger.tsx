@@ -8,7 +8,7 @@ import { SavingsEntryModal } from "@/components/savings/SavingsEntryModal";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-const SIZE = 10,
+const SIZE = 25,
   labels = { POKOK: "Pokok", WAJIB: "Wajib", SUKARELA: "Sukarela" };
 const rupiah = (v: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -136,7 +136,7 @@ export async function SavingsLedger({
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-bold">Transaksi {title}</h3>
-              <p className="text-sm text-slate-500">10 transaksi per halaman</p>
+              <p className="text-sm text-slate-500">25 transaksi per halaman</p>
             </div>
             {type === "WAJIB" ? (
               <BulkMandatorySavingsForm members={members} />

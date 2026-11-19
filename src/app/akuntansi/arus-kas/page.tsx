@@ -7,7 +7,7 @@ import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-const SIZE = 10;
+const SIZE = 25;
 const rp = (v: number) =>
   new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -97,7 +97,7 @@ export default async function Page({
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-bold">Riwayat Arus Kas</h3>
-              <p className="text-sm text-slate-500">10 transaksi per halaman</p>
+              <p className="text-sm text-slate-500">25 transaksi per halaman</p>
             </div>
             <AccountingEntryModal kind="cash" accounts={options} />
           </div>

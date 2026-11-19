@@ -6,7 +6,7 @@ import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-const SIZE = 10;
+const SIZE = 25;
 const rp = (v: number) =>
   new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -106,7 +106,7 @@ export default async function Page({
         <section className="mt-6 rounded-card bg-white p-7 shadow-sm">
           <h3 className="text-lg font-bold">Riwayat Hasil Usaha</h3>
           <p className="text-sm text-slate-500">
-            Diakui saat pembayaran angsuran diterima · 10 data per halaman
+            Diakui saat pembayaran angsuran diterima · 25 data per halaman
           </p>
           <form className="mt-5 grid grid-cols-5 gap-3">
             <input

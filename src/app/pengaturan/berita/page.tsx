@@ -7,6 +7,9 @@ import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { SettingsTabs } from "@/components/settings/SettingsTabs";
 import { authOptions } from "@/lib/auth";
+import { ListFilters } from "@/components/shared/ListFilters";
+import { Pagination } from "@/components/shared/Pagination";
+import { clampPage, dateRange, firstParam, pageWindow, parsePage } from "@/lib/listing";
 import { prisma } from "@/lib/prisma";
 import { mediaUrl } from "@/lib/landing";
 const input =
@@ -14,14 +17,39 @@ const input =
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ success?: string; error?: string }>;
+  searchParams: Promise<{
+    success?: string;
+    error?: string;
+    q?: string;
+    from?: string;
+    to?: string;
+    page?: string;
+  }>;
 }) {
   const s = await getServerSession(authOptions);
   if (!s) redirect("/login");
   if (!["SUPER_ADMIN", "ADMIN_KOPERASI"].includes(s.user.role))
     redirect("/dashboard");
   const q = await searchParams,
-    posts = await prisma.newsPost.findMany({ orderBy: { eventDate: "desc" } });
+    search = firstParam(q.q),
+    from = firstParam(q.from),
+    to = firstParam(q.to),
+    where = {
+      eventDate: dateRange(from, to),
+      OR: search
+        ? [
+            { title: { contains: search, mode: "insensitive" as const } },
+            { excerpt: { contains: search, mode: "insensitive" as const } },
+          ]
+        : undefined,
+    },
+    total = await prisma.newsPost.count({ where }),
+    page = clampPage(parsePage(q.page), total),
+    posts = await prisma.newsPost.findMany({
+      where,
+      orderBy: [{ eventDate: "desc" }, { id: "asc" }],
+      ...pageWindow(page),
+    });
   return (
     <>
       <AppSidebar />
@@ -108,8 +136,14 @@ export default async function Page({
           <div className="rounded-card border border-slate-200/70 bg-white p-5 shadow-sm sm:p-7 xl:col-span-7">
             <h3 className="font-bold">Berita Terbit</h3>
             <p className="text-sm text-slate-500">
-              {posts.length} berita dan kegiatan
+              {total.toLocaleString("id-ID")} berita dan kegiatan
             </p>
+            <ListFilters
+              basePath="/pengaturan/berita"
+              q={search}
+              placeholder="Cari judul atau ringkasan..."
+              dates={{ from, to }}
+            />
             <div className="mt-5 space-y-4">
               {posts.map((post) => (
                 <article
@@ -153,10 +187,20 @@ export default async function Page({
               {!posts.length && (
                 <div className="py-16 text-center text-slate-400">
                   <Newspaper className="mx-auto" />
-                  <p className="mt-3 text-sm">Belum ada berita.</p>
+                  <p className="mt-3 text-sm">
+                    {search || from || to
+                      ? "Tidak ada berita yang sesuai."
+                      : "Belum ada berita."}
+                  </p>
                 </div>
               )}
             </div>
+            <Pagination
+              basePath="/pengaturan/berita"
+              query={{ q: search, from, to }}
+              page={page}
+              total={total}
+            />
           </div>
         </section>
       </main>

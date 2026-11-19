@@ -12,6 +12,9 @@ import { redirect } from "next/navigation";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { authOptions } from "@/lib/auth";
+import { ListFilters } from "@/components/shared/ListFilters";
+import { Pagination } from "@/components/shared/Pagination";
+import { clampPage, pageWindow, parsePage } from "@/lib/listing";
 import { prisma } from "@/lib/prisma";
 
 const employmentLabels = {
@@ -23,7 +26,13 @@ const employmentLabels = {
 export default async function MembersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string; success?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    status?: string;
+    aktif?: string;
+    page?: string;
+    success?: string;
+  }>;
 }) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
@@ -37,22 +46,23 @@ export default async function MembersPage({
     ? (filters.status as "PNS" | "PPPK" | "PPPK_PARUH_WAKTU")
     : undefined;
 
-  const [members, total, active, pns, pppk] = await Promise.all([
-    prisma.member.findMany({
-      where: {
-        employmentStatus,
-        OR: query
-          ? [
-              { name: { contains: query, mode: "insensitive" } },
-              { memberNumber: { contains: query, mode: "insensitive" } },
-              { nik: { contains: query } },
-              { employeeNumber: { contains: query, mode: "insensitive" } },
-            ]
-          : undefined,
-      },
-      orderBy: { createdAt: "desc" },
-      take: 100,
-    }),
+  const isActive =
+    filters.aktif === "aktif" ? true : filters.aktif === "nonaktif" ? false : undefined;
+  const where = {
+    employmentStatus,
+    isActive,
+    OR: query
+      ? [
+          { name: { contains: query, mode: "insensitive" as const } },
+          { memberNumber: { contains: query, mode: "insensitive" as const } },
+          { nik: { contains: query } },
+          { employeeNumber: { contains: query, mode: "insensitive" as const } },
+        ]
+      : undefined,
+  };
+
+  const [matched, total, active, pns, pppk] = await Promise.all([
+    prisma.member.count({ where }),
     prisma.member.count(),
     prisma.member.count({ where: { isActive: true } }),
     prisma.member.count({ where: { employmentStatus: "PNS" } }),
@@ -60,6 +70,12 @@ export default async function MembersPage({
       where: { employmentStatus: { in: ["PPPK", "PPPK_PARUH_WAKTU"] } },
     }),
   ]);
+  const page = clampPage(parsePage(filters.page), matched);
+  const members = await prisma.member.findMany({
+    where,
+    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+    ...pageWindow(page),
+  });
 
   return (
     <>
@@ -96,7 +112,10 @@ export default async function MembersPage({
                 Daftar Anggota
               </h3>
               <p className="text-sm text-slate-500">
-                Maksimal 100 data terbaru ditampilkan
+                {matched.toLocaleString("id-ID")} anggota
+                {query || employmentStatus || isActive !== undefined
+                  ? " sesuai filter"
+                  : " terdaftar"}
               </p>
             </div>
             <Link
@@ -107,30 +126,32 @@ export default async function MembersPage({
             </Link>
           </div>
 
-          <form className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <div className="flex h-11 flex-1 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 transition focus-within:border-blue-300 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-100">
-              <Search size={18} className="text-slate-400" />
-              <input
-                name="q"
-                defaultValue={query}
-                className="w-full bg-transparent text-sm outline-none"
-                placeholder="Cari nama, nomor anggota, NIK, atau NIP..."
-              />
-            </div>
-            <select
-              name="status"
-              defaultValue={employmentStatus ?? ""}
-              className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 outline-none"
-            >
-              <option value="">Semua Kepegawaian</option>
-              <option value="PNS">PNS</option>
-              <option value="PPPK">PPPK</option>
-              <option value="PPPK_PARUH_WAKTU">PPPK Paruh Waktu</option>
-            </select>
-            <button className="h-11 rounded-xl bg-slate-900 px-5 text-sm font-bold text-white">
-              Terapkan
-            </button>
-          </form>
+          <ListFilters
+            basePath="/anggota"
+            q={query}
+            placeholder="Cari nama, nomor anggota, NIK, atau NIP..."
+            selects={[
+              {
+                name: "status",
+                label: "Semua kepegawaian",
+                value: employmentStatus ?? "",
+                options: [
+                  { value: "PNS", label: "PNS" },
+                  { value: "PPPK", label: "PPPK" },
+                  { value: "PPPK_PARUH_WAKTU", label: "PPPK Paruh Waktu" },
+                ],
+              },
+              {
+                name: "aktif",
+                label: "Semua status",
+                value: filters.aktif ?? "",
+                options: [
+                  { value: "aktif", label: "Aktif" },
+                  { value: "nonaktif", label: "Nonaktif" },
+                ],
+              },
+            ]}
+          />
 
           <div className="mt-6 overflow-x-auto">
             <table className="w-full min-w-[720px] text-left text-sm">
@@ -207,13 +228,19 @@ export default async function MembersPage({
                       colSpan={6}
                       className="py-16 text-center text-sm text-slate-400"
                     >
-                      Belum ada anggota yang sesuai.
+                      Tidak ada anggota yang sesuai dengan pencarian atau filter.
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
+          <Pagination
+            basePath="/anggota"
+            query={{ q: query, status: employmentStatus, aktif: filters.aktif }}
+            page={page}
+            total={matched}
+          />
         </section>
       </main>
     </>

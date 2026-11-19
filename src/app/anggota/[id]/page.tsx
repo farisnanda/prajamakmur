@@ -11,6 +11,8 @@ import { notFound, redirect } from "next/navigation";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { authOptions } from "@/lib/auth";
+import { Pagination } from "@/components/shared/Pagination";
+import { PAGE_SIZE, clampPage, parsePage } from "@/lib/listing";
 import { prisma } from "@/lib/prisma";
 
 const employmentLabels = {
@@ -55,14 +57,15 @@ export default async function MemberDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; lp?: string; pp?: string; wp?: string }>;
 }) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
   if (session.user.role === "ANGGOTA") redirect("/dashboard");
 
   const { id } = await params;
-  const tab = (await searchParams).tab === "simpanan" ? "simpanan" : "pinjaman";
+  const query = await searchParams;
+  const tab = query.tab === "simpanan" ? "simpanan" : "pinjaman";
 
   const member = await prisma.member.findUnique({
     where: { id },
@@ -116,6 +119,22 @@ export default async function MemberDetailPage({
   const mandatoryRows = member.savings.filter(
     (row) => row.savingsType === "WAJIB",
   );
+
+  const slicePage = <T,>(rows: T[], raw: string | undefined) => {
+    const page = clampPage(parsePage(raw), rows.length);
+    return { page, rows: rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) };
+  };
+  const loansPaged = slicePage(member.loans, query.lp);
+  const principalPaged = slicePage(principalRows, query.pp);
+  const mandatoryPaged = slicePage(mandatoryRows, query.wp);
+  const detailPath = `/anggota/${member.id}`;
+  const keep = (extra: Record<string, string | undefined>) => ({
+    tab,
+    lp: query.lp,
+    pp: query.pp,
+    wp: query.wp,
+    ...extra,
+  });
 
   return (
     <>
@@ -381,7 +400,7 @@ export default async function MemberDetailPage({
                       </tr>
                     </thead>
                     <tbody>
-                      {member.loans.map((loan) => {
+                      {loansPaged.rows.map((loan) => {
                         const status = loanStatus[loan.status];
                         return (
                           <tr
@@ -426,6 +445,13 @@ export default async function MemberDetailPage({
                       })}
                     </tbody>
                   </table>
+                  <Pagination
+                    basePath={detailPath}
+                    pageParam="lp"
+                    query={keep({ lp: undefined })}
+                    page={loansPaged.page}
+                    total={member.loans.length}
+                  />
                 </div>
               ) : (
                 <Empty>Anggota ini belum pernah mengajukan pinjaman.</Empty>
@@ -438,14 +464,32 @@ export default async function MemberDetailPage({
               title="Simpanan pokok"
               note="Dibayar sekali saat mendaftar"
               total={principalSavings}
-              rows={principalRows}
+              rows={principalPaged.rows}
+              footer={
+                <Pagination
+                  basePath={detailPath}
+                  pageParam="pp"
+                  query={keep({ pp: undefined })}
+                  page={principalPaged.page}
+                  total={principalRows.length}
+                />
+              }
               empty="Simpanan pokok belum dibayar."
             />
             <SavingsPanel
               title="Simpanan wajib"
               note="Dibayar setiap bulan"
               total={mandatorySavings}
-              rows={mandatoryRows}
+              rows={mandatoryPaged.rows}
+              footer={
+                <Pagination
+                  basePath={detailPath}
+                  pageParam="wp"
+                  query={keep({ wp: undefined })}
+                  page={mandatoryPaged.page}
+                  total={mandatoryRows.length}
+                />
+              }
               empty="Belum ada setoran simpanan wajib."
             />
           </div>
@@ -525,6 +569,7 @@ function SavingsPanel({
   note,
   total,
   rows,
+  footer,
   empty,
 }: {
   title: string;
@@ -538,6 +583,7 @@ function SavingsPanel({
     transactionDate: Date;
     periodKey: string | null;
   }[];
+  footer?: React.ReactNode;
   empty: string;
 }) {
   return (
@@ -585,6 +631,7 @@ function SavingsPanel({
         ) : (
           <Empty>{empty}</Empty>
         )}
+        {rows.length > 0 && footer}
       </div>
     </Panel>
   );

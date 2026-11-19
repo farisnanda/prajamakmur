@@ -4,6 +4,9 @@ import { markWithdrawalTransferred } from "./actions";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { authOptions } from "@/lib/auth";
+import { ListFilters } from "@/components/shared/ListFilters";
+import { Pagination } from "@/components/shared/Pagination";
+import { clampPage, dateRange, firstParam, pageWindow, parsePage } from "@/lib/listing";
 import { prisma } from "@/lib/prisma";
 const rp = (v: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -17,7 +20,15 @@ const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ success?: string; error?: string }>;
+  searchParams: Promise<{
+    success?: string;
+    error?: string;
+    q?: string;
+    status?: string;
+    from?: string;
+    to?: string;
+    page?: string;
+  }>;
 }) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
@@ -26,10 +37,33 @@ export default async function Page({
   )
     redirect("/dashboard");
   const q = await searchParams;
+  const search = firstParam(q.q);
+  const status = ["SUBMITTED", "TRANSFERRED"].includes(q.status ?? "")
+    ? (q.status as "SUBMITTED" | "TRANSFERRED")
+    : undefined;
+  const from = firstParam(q.from);
+  const to = firstParam(q.to);
+  const where = {
+    status,
+    createdAt: dateRange(from, to),
+    OR: search
+      ? [
+          { requestNumber: { contains: search, mode: "insensitive" as const } },
+          { bankName: { contains: search, mode: "insensitive" as const } },
+          { accountNumber: { contains: search } },
+          { accountHolder: { contains: search, mode: "insensitive" as const } },
+          { member: { name: { contains: search, mode: "insensitive" as const } } },
+          { member: { memberNumber: { contains: search, mode: "insensitive" as const } } },
+        ]
+      : undefined,
+  };
+  const total = await prisma.savingsWithdrawalRequest.count({ where });
+  const page = clampPage(parsePage(q.page), total);
   const requests = await prisma.savingsWithdrawalRequest.findMany({
+    where,
     include: { member: { select: { name: true, memberNumber: true } } },
-    orderBy: { createdAt: "desc" },
-    take: 100,
+    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+    ...pageWindow(page),
   });
   return (
     <>
@@ -47,6 +81,23 @@ export default async function Page({
         )}
         <section className="rounded-card bg-white p-7 shadow-sm">
           <h3 className="text-lg font-bold">Daftar Pengajuan Penarikan</h3>
+          <ListFilters
+            basePath="/simpanan/sukarela/penarikan"
+            q={search}
+            placeholder="Cari nama, nomor anggota, nomor pengajuan, atau rekening..."
+            dates={{ from, to }}
+            selects={[
+              {
+                name: "status",
+                label: "Semua status",
+                value: status ?? "",
+                options: [
+                  { value: "SUBMITTED", label: "Menunggu" },
+                  { value: "TRANSFERRED", label: "Sudah Ditransfer" },
+                ],
+              },
+            ]}
+          />
           <div className="mt-5 overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
@@ -114,9 +165,22 @@ export default async function Page({
                     </td>
                   </tr>
                 ))}
+                {!requests.length && (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center text-slate-400">
+                      Tidak ada pengajuan yang sesuai.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
+          <Pagination
+            basePath="/simpanan/sukarela/penarikan"
+            query={{ q: search, status, from, to }}
+            page={page}
+            total={total}
+          />
         </section>
       </main>
     </>

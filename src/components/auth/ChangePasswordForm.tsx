@@ -1,31 +1,38 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { LoaderCircle } from "lucide-react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import {
   changePassword,
   type ChangePasswordState,
 } from "@/app/ganti-password/actions";
 
+const BASE_PATH = "/prajamakmur";
 const initial: ChangePasswordState = {};
 const field =
   "h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100";
 
 export function ChangePasswordForm() {
-  const router = useRouter();
-  const { update } = useSession();
   const [state, action, pending] = useActionState(changePassword, initial);
+  const redirected = useRef(false);
 
   useEffect(() => {
-    if (!state.ok) return;
-    // Segarkan token agar penanda wajib-ganti hilang, lalu masuk ke aplikasi.
-    void update().then(() => {
-      router.replace("/dashboard");
-      router.refresh();
-    });
-  }, [state.ok, update, router]);
+    if (!state.ok || redirected.current) return;
+    redirected.current = true;
+
+    // 1) Minta sesi baru: server membaca ulang status "wajib ganti password"
+    //    dari database dan menulis ulang cookie sesi.
+    // 2) Baru setelah itu pindah dengan muat ulang penuh, supaya halaman
+    //    berikutnya pasti memakai cookie yang sudah diperbarui.
+    void fetch(`${BASE_PATH}/api/auth/session`, {
+      credentials: "same-origin",
+      cache: "no-store",
+    })
+      .catch(() => undefined)
+      .finally(() => {
+        window.location.assign(`${BASE_PATH}/dashboard`);
+      });
+  }, [state.ok]);
 
   return (
     <form action={action} className="space-y-5">
@@ -68,6 +75,11 @@ export function ChangePasswordForm() {
       {state.message && (
         <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
           {state.message}
+        </p>
+      )}
+      {state.ok && (
+        <p role="status" className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+          Kata sandi berhasil diganti. Mengalihkan ke dashboard...
         </p>
       )}
 

@@ -11,6 +11,9 @@ import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { SettingsTabs } from "@/components/settings/SettingsTabs";
 import { authOptions } from "@/lib/auth";
+import { ListFilters } from "@/components/shared/ListFilters";
+import { Pagination } from "@/components/shared/Pagination";
+import { clampPage, pageWindow, parsePage } from "@/lib/listing";
 import { prisma } from "@/lib/prisma";
 const roleLabels = {
   SUPER_ADMIN: "Super Admin",
@@ -26,7 +29,14 @@ const input =
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ success?: string; error?: string; q?: string }>;
+  searchParams: Promise<{
+    success?: string;
+    error?: string;
+    q?: string;
+    role?: string;
+    aktif?: string;
+    page?: string;
+  }>;
 }) {
   const s = await getServerSession(authOptions);
   if (!s) redirect("/login");
@@ -35,35 +45,46 @@ export default async function Page({
   const q = await searchParams,
     query = q.q?.trim() ?? "",
     isSuper = s.user.role === "SUPER_ADMIN",
-    [users, members] = await Promise.all([
-      prisma.user.findMany({
-        where: query
-          ? {
-              OR: [
-                { name: { contains: query, mode: "insensitive" } },
-                { email: { contains: query, mode: "insensitive" } },
-                { member: { employeeNumber: { contains: query } } },
-                { member: { memberNumber: { contains: query, mode: "insensitive" } } },
-              ],
-            }
-          : undefined,
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-          isActive: true,
-          mustChangePassword: true,
-          member: { select: { memberNumber: true, employeeNumber: true } },
-        },
-        orderBy: { name: "asc" },
-      }),
+    roleFilter = Object.keys(roleLabels).includes(q.role ?? "")
+      ? (q.role as keyof typeof roleLabels)
+      : undefined,
+    activeFilter =
+      q.aktif === "aktif" ? true : q.aktif === "nonaktif" ? false : undefined,
+    where = {
+      role: roleFilter,
+      isActive: activeFilter,
+      OR: query
+        ? [
+            { name: { contains: query, mode: "insensitive" as const } },
+            { email: { contains: query, mode: "insensitive" as const } },
+            { member: { employeeNumber: { contains: query } } },
+            { member: { memberNumber: { contains: query, mode: "insensitive" as const } } },
+          ]
+        : undefined,
+    },
+    [userCount, members] = await Promise.all([
+      prisma.user.count({ where }),
       prisma.member.findMany({
         where: { isActive: true, user: null, employeeNumber: { not: null } },
         select: { id: true, name: true, memberNumber: true, employeeNumber: true },
         orderBy: { name: "asc" },
       }),
-    ]);
+    ]),
+    page = clampPage(parsePage(q.page), userCount),
+    users = await prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        mustChangePassword: true,
+        member: { select: { memberNumber: true, employeeNumber: true } },
+      },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
+      ...pageWindow(page),
+    });
   const error = {
     invalid: "Data akun belum valid atau email sudah digunakan.",
     linked: "Anggota tersebut sudah memiliki akun.",
@@ -136,21 +157,35 @@ export default async function Page({
             <div>
               <h3 className="font-bold">Daftar Akun</h3>
               <p className="text-sm text-slate-500">
-                {users.length} akun terdaftar
+                {userCount.toLocaleString("id-ID")} akun
               </p>
             </div>
           </div>
-          <form className="mt-5 flex gap-3">
-            <input
-              name="q"
-              defaultValue={query}
-              placeholder="Cari NIP/NI, nama, atau email..."
-              className={`${input} w-full max-w-md`}
-            />
-            <button className="h-11 rounded-xl bg-slate-900 px-5 text-sm font-bold text-white">
-              Cari
-            </button>
-          </form>
+          <ListFilters
+            basePath="/pengaturan/akun"
+            q={query}
+            placeholder="Cari NIP/NI, nama, atau email..."
+            selects={[
+              {
+                name: "role",
+                label: "Semua role",
+                value: roleFilter ?? "",
+                options: Object.entries(roleLabels).map(([value, label]) => ({
+                  value,
+                  label,
+                })),
+              },
+              {
+                name: "aktif",
+                label: "Semua status",
+                value: q.aktif ?? "",
+                options: [
+                  { value: "aktif", label: "Aktif" },
+                  { value: "nonaktif", label: "Nonaktif" },
+                ],
+              },
+            ]}
+          />
           {!isSuper && (
             <p className="mt-3 text-xs text-slate-500">
               Role hanya dapat diubah oleh Super Admin.
@@ -291,6 +326,12 @@ export default async function Page({
               </tbody>
             </table>
           </div>
+          <Pagination
+            basePath="/pengaturan/akun"
+            query={{ q: query, role: roleFilter, aktif: q.aktif }}
+            page={page}
+            total={userCount}
+          />
         </section>
       </main>
     </>

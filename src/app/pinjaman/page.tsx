@@ -18,6 +18,9 @@ import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { authOptions } from "@/lib/auth";
 import { KAS_UMUM_BANK } from "@/lib/cashAccounts";
+import { ListFilters } from "@/components/shared/ListFilters";
+import { Pagination } from "@/components/shared/Pagination";
+import { clampPage, pageWindow, parsePage } from "@/lib/listing";
 import { prisma } from "@/lib/prisma";
 
 const rupiah = (value: number) =>
@@ -37,6 +40,9 @@ export default async function LoansPage({
     error?: string;
     required?: string;
     available?: string;
+    q?: string;
+    qp?: string;
+    ap?: string;
   }>;
 }) {
   const session = await getServerSession(authOptions);
@@ -76,17 +82,23 @@ export default async function LoansPage({
       : session.user.role === "KETUA_KOPERASI"
         ? rejectByChairman
         : undefined;
-  const [queue, active, cash, reserved] = await Promise.all([
-    prisma.loan.findMany({
-      where: { status: queueStatus },
-      include: { member: { select: { name: true, memberNumber: true } } },
-      orderBy: { applicationDate: "desc" },
-    }),
-    prisma.loan.findMany({
-      where: { status: "ACTIVE" },
-      include: { member: { select: { name: true, memberNumber: true } } },
-      orderBy: { startDate: "desc" },
-    }),
+  const search = (query.q ?? "").trim();
+  const searchWhere = search
+    ? {
+        OR: [
+          { loanNumber: { contains: search, mode: "insensitive" as const } },
+          { purpose: { contains: search, mode: "insensitive" as const } },
+          { member: { name: { contains: search, mode: "insensitive" as const } } },
+          { member: { memberNumber: { contains: search, mode: "insensitive" as const } } },
+        ],
+      }
+    : {};
+  const queueWhere = { status: queueStatus, ...searchWhere } as const;
+  const activeWhere = { status: "ACTIVE", ...searchWhere } as const;
+  const [queueTotal, activeTotal, activeAll, cash, reserved] = await Promise.all([
+    prisma.loan.count({ where: queueWhere }),
+    prisma.loan.count({ where: activeWhere }),
+    prisma.loan.count({ where: { status: "ACTIVE" } }),
     prisma.cashAccount.findUnique({
       where: { code: KAS_UMUM_BANK },
       select: { balance: true },
@@ -94,6 +106,22 @@ export default async function LoansPage({
     prisma.loan.aggregate({
       where: { status: "FINAL_APPROVED" },
       _sum: { principalAmount: true },
+    }),
+  ]);
+  const queuePage = clampPage(parsePage(query.qp), queueTotal);
+  const activePage = clampPage(parsePage(query.ap), activeTotal);
+  const [queue, active] = await Promise.all([
+    prisma.loan.findMany({
+      where: queueWhere,
+      include: { member: { select: { name: true, memberNumber: true } } },
+      orderBy: [{ applicationDate: "desc" }, { id: "asc" }],
+      ...pageWindow(queuePage),
+    }),
+    prisma.loan.findMany({
+      where: activeWhere,
+      include: { member: { select: { name: true, memberNumber: true } } },
+      orderBy: [{ startDate: "desc" }, { id: "asc" }],
+      ...pageWindow(activePage),
     }),
   ]);
   return (
@@ -122,13 +150,13 @@ export default async function LoansPage({
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <Summary
             label="Antrean Tahap Anda"
-            value={`${queue.length} pengajuan`}
+            value={`${queueTotal} pengajuan`}
             icon={Clock3}
             tone="amber"
           />
           <Summary
             label="Pinjaman Berjalan"
-            value={`${active.length} pinjaman`}
+            value={`${activeAll} pinjaman`}
             icon={BadgeCheck}
             tone="emerald"
           />
@@ -145,6 +173,13 @@ export default async function LoansPage({
             tone="blue"
           />
         </section>
+        <section className="mt-6 rounded-card border border-slate-200/70 bg-white p-5 pt-1 shadow-sm sm:p-7 sm:pt-2">
+          <ListFilters
+            basePath="/pinjaman"
+            q={search}
+            placeholder="Cari nama anggota, nomor anggota, nomor pinjaman, atau tujuan..."
+          />
+        </section>
         <section className="mt-6 space-y-6">
           <LoanList
             title={queueTitle}
@@ -153,8 +188,29 @@ export default async function LoansPage({
             rejectAction={rejectAction}
             buttonLabel={buttonLabel}
             requireReference={requireReference}
+            footer={
+              <Pagination
+                basePath="/pinjaman"
+                pageParam="qp"
+                query={{ q: search, ap: query.ap }}
+                page={queuePage}
+                total={queueTotal}
+              />
+            }
           />
-          <LoanList title="Pinjaman Berjalan" loans={active} />
+          <LoanList
+            title="Pinjaman Berjalan"
+            loans={active}
+            footer={
+              <Pagination
+                basePath="/pinjaman"
+                pageParam="ap"
+                query={{ q: search, qp: query.qp }}
+                page={activePage}
+                total={activeTotal}
+              />
+            }
+          />
         </section>
       </main>
     </>
@@ -175,6 +231,7 @@ function LoanList({
   rejectAction,
   buttonLabel,
   requireReference = false,
+  footer,
 }: {
   title: string;
   loans: LoanRow[];
@@ -182,6 +239,7 @@ function LoanList({
   rejectAction?: (formData: FormData) => Promise<void>;
   buttonLabel?: string;
   requireReference?: boolean;
+  footer?: React.ReactNode;
 }) {
   const pending = Boolean(action);
   return (
@@ -291,13 +349,14 @@ function LoanList({
             {!loans.length && (
               <tr>
                 <td colSpan={5} className="py-12 text-center text-slate-400">
-                  Belum ada data pada tahap ini.
+                  Tidak ada data yang sesuai.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
+      {footer}
     </div>
   );
 }
