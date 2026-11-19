@@ -5,6 +5,7 @@ import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { BulkMandatorySavingsForm } from "@/components/savings/BulkMandatorySavingsForm";
 import { SavingsEntryModal } from "@/components/savings/SavingsEntryModal";
+import { missingPrincipalWhere } from "@/lib/principalSavings";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -23,6 +24,8 @@ type Filters = {
   savingsType?: string;
   transactionType?: string;
   success?: string;
+  created?: string;
+  skipped?: string;
   page?: string;
 };
 
@@ -69,7 +72,8 @@ export async function SavingsLedger({
       _sum: { amount: true },
     }),
     prisma.member.findMany({
-      where: { isActive: true },
+      // Simpanan pokok sekali per anggota: tampilkan yang belum punya saja.
+      where: type === "POKOK" ? missingPrincipalWhere : { isActive: true },
       select: {
         id: true,
         name: true,
@@ -108,7 +112,8 @@ export async function SavingsLedger({
   const href = (p: number) => {
     const x = new URLSearchParams();
     Object.entries(filters).forEach(([k, v]) => {
-      if (v && k !== "page" && k !== "success") x.set(k, v);
+      if (v && k !== "page" && k !== "success" && k !== "created" && k !== "skipped")
+        x.set(k, v);
     });
     x.set("page", String(p));
     return `?${x}`;
@@ -124,7 +129,13 @@ export async function SavingsLedger({
       <main className="min-h-screen bg-slate-50 px-4 pb-12 pt-24 sm:px-6 lg:ml-[280px] lg:px-10 lg:pt-28">
         {filters.success && (
           <div className="mb-5 rounded-xl bg-emerald-50 p-4 text-sm font-bold text-emerald-700">
-            Transaksi berhasil dicatat.
+            {filters.success === "batch"
+              ? `${Number(filters.created) || 0} transaksi berhasil dicatat.${
+                  Number(filters.skipped) > 0
+                    ? ` ${Number(filters.skipped)} anggota dilewati karena sudah tercatat.`
+                    : ""
+                }`
+              : "Transaksi berhasil dicatat."}
           </div>
         )}
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -140,6 +151,11 @@ export async function SavingsLedger({
             </div>
             {type === "WAJIB" ? (
               <BulkMandatorySavingsForm members={members} />
+            ) : type === "POKOK" ? (
+              <div className="flex flex-wrap gap-3">
+                <BulkMandatorySavingsForm members={members} kind="POKOK" />
+                <SavingsEntryModal type="POKOK" members={members} />
+              </div>
             ) : type ? (
               <SavingsEntryModal
                 type={type as "POKOK" | "SUKARELA"}

@@ -4,6 +4,7 @@ import { useActionState, useMemo, useState } from "react";
 import { CheckSquare, LoaderCircle, Search, Users, X } from "lucide-react";
 import {
   createBulkMandatorySavings,
+  createBulkPrincipalSavings,
   type BulkMandatorySavingsState,
 } from "@/app/simpanan/actions";
 
@@ -31,11 +32,15 @@ const employmentLabel: Record<MemberOption["employmentStatus"], string> = {
 
 export function BulkMandatorySavingsForm({
   members,
+  kind = "WAJIB",
 }: {
   members: MemberOption[];
+  /** WAJIB: per periode bulan. POKOK: sekali per anggota, tanpa periode. */
+  kind?: "WAJIB" | "POKOK";
 }) {
+  const principal = kind === "POKOK";
   const [state, formAction, pending] = useActionState(
-    createBulkMandatorySavings,
+    principal ? createBulkPrincipalSavings : createBulkMandatorySavings,
     initialState,
   );
   const [open, setOpen] = useState(false);
@@ -91,7 +96,7 @@ export function BulkMandatorySavingsForm({
         className="flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <CheckSquare size={18} />
-        Catat Wajib Bulanan
+        {principal ? "Catat Pokok Serentak" : "Catat Wajib Bulanan"}
       </button>
 
       {open && (
@@ -100,7 +105,7 @@ export function BulkMandatorySavingsForm({
             <div className="flex items-start justify-between border-b border-slate-100 px-7 py-6">
               <div>
                 <h3 className="text-xl font-bold text-slate-900">
-                  Simpanan Wajib Bulanan
+                  {principal ? "Simpanan Pokok Serentak" : "Simpanan Wajib Bulanan"}
                 </h3>
                 <p className="mt-1 text-sm text-slate-500">
                   Pilih tanggal transaksi lalu tentukan anggota yang akan
@@ -129,19 +134,21 @@ export function BulkMandatorySavingsForm({
                 )}
 
                 <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-                  <Field
-                    label="Periode Bulan"
-                    error={state.errors?.period?.[0]}
-                  >
-                    <input
-                      name="period"
-                      type="month"
-                      className={inputClass}
-                      value={period}
-                      onChange={(event) => setPeriod(event.target.value)}
-                      required
-                    />
-                  </Field>
+                  {!principal && (
+                    <Field
+                      label="Periode Bulan"
+                      error={state.errors?.period?.[0]}
+                    >
+                      <input
+                        name="period"
+                        type="month"
+                        className={inputClass}
+                        value={period}
+                        onChange={(event) => setPeriod(event.target.value)}
+                        required
+                      />
+                    </Field>
+                  )}
                   <Field
                     label="Tanggal Transaksi"
                     error={state.errors?.transactionDate?.[0]}
@@ -267,8 +274,9 @@ export function BulkMandatorySavingsForm({
 
               <div className="flex items-center justify-between border-t border-slate-100 px-7 py-5">
                 <p className="text-sm text-slate-500">
-                  Anggota yang sudah tercatat pada periode yang sama akan
-                  otomatis dilewati.
+                  {principal
+                    ? "Hanya anggota aktif yang belum memiliki simpanan pokok yang ditampilkan."
+                    : "Anggota yang sudah tercatat pada periode yang sama akan otomatis dilewati."}
                 </p>
                 <div className="flex gap-3">
                   <button

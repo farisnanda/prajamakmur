@@ -8,6 +8,7 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { cashChannelCode } from "@/lib/cashAccounts";
 import { prisma } from "@/lib/prisma";
+import { recordPrincipalSavings } from "@/lib/principalSavings";
 
 export type SavingsFormState = {
   message?: string;
@@ -207,6 +208,69 @@ export async function createSavingsTransaction(
   revalidatePath("/akuntansi/arus-kas");
   revalidatePath("/dashboard");
   redirect(`${destination}?success=created`);
+}
+
+const bulkPrincipalSchema = z.object({
+  transactionDate: z.coerce.date(),
+  cashChannel: z.enum(["BANK", "TUNAI"]),
+  note: z.string().trim().optional(),
+  memberIds: z.array(z.string().min(1)).min(1, "Pilih minimal satu anggota."),
+});
+
+/** Catat simpanan pokok sekaligus untuk banyak anggota (anggota yang sudah punya dilewati). */
+export async function createBulkPrincipalSavings(
+  _state: BulkMandatorySavingsState,
+  formData: FormData,
+): Promise<BulkMandatorySavingsState> {
+  const session = await requireSavingsAccess();
+  const parsed = bulkPrincipalSchema.safeParse({
+    transactionDate: formData.get("transactionDate"),
+    cashChannel: formData.get("cashChannel"),
+    note: formData.get("note"),
+    memberIds: formData.getAll("memberIds"),
+  });
+  if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
+  const data = parsed.data;
+
+  const members = await prisma.member.findMany({
+    where: { id: { in: data.memberIds }, isActive: true },
+    select: { id: true, name: true },
+  });
+  if (!members.length)
+    return { message: "Tidak ada anggota aktif yang dipilih." };
+
+  let created = 0;
+  try {
+    const result = await prisma.$transaction(
+      (tx) =>
+        recordPrincipalSavings(tx, {
+          members,
+          createdById: session.user.id,
+          channel: data.cashChannel,
+          date: data.transactionDate,
+          note: data.note || "Simpanan pokok",
+        }),
+      { timeout: 120_000, maxWait: 10_000 },
+    );
+    created = result.count;
+  } catch (error) {
+    return {
+      message:
+        error instanceof Error && error.message.includes("kas")
+          ? error.message
+          : "Transaksi belum dapat disimpan.",
+    };
+  }
+  if (!created)
+    return { message: "Semua anggota terpilih sudah memiliki simpanan pokok." };
+
+  revalidatePath("/simpanan");
+  revalidatePath("/simpanan/pokok");
+  revalidatePath("/akuntansi/arus-kas");
+  revalidatePath("/dashboard");
+  redirect(
+    `/simpanan/pokok?success=batch&created=${created}&skipped=${members.length - created}`,
+  );
 }
 
 export async function createBulkMandatorySavings(
