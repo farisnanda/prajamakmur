@@ -15,7 +15,8 @@ const memberSchema = z.object({
   nik: z
     .string()
     .trim()
-    .regex(/^\d{16}$/, "NIK harus terdiri dari 16 angka."),
+    .optional()
+    .refine((value) => !value || /^\d{16}$/.test(value), "NIK harus terdiri dari 16 angka."),
   employeeNumber: z.string().trim().optional(),
   name: z.string().trim().min(3, "Nama minimal 3 karakter."),
   employmentStatus: z.enum(["PNS", "PPPK", "PPPK_PARUH_WAKTU"]),
@@ -73,6 +74,7 @@ export async function createMember(
     await prisma.member.create({
       data: {
         ...parsed.data,
+        nik: parsed.data.nik || null,
         employeeNumber: parsed.data.employeeNumber || null,
         phone: parsed.data.phone || null,
         address: parsed.data.address || null,
@@ -100,6 +102,7 @@ export async function updateMember(
       where: { id },
       data: {
         ...parsed.data,
+        nik: parsed.data.nik || null,
         employeeNumber: parsed.data.employeeNumber || null,
         phone: parsed.data.phone || null,
         address: parsed.data.address || null,

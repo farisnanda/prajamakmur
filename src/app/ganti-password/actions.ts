@@ -41,7 +41,7 @@ export async function changePassword(
     return { message: "Kata sandi saat ini tidak sesuai." };
   if (
     next === user.member?.employeeNumber ||
-    next === user.member?.nik
+    (!!user.member?.nik && next === user.member.nik)
   )
     return { message: "Jangan memakai NIP/NI atau NIK sebagai kata sandi." };
 

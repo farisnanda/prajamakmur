@@ -162,7 +162,7 @@ export default async function MembersPage({
                       </p>
                     </td>
                     <td>
-                      <p>{member.nik}</p>
+                      <p>{member.nik ?? "NIK belum diisi"}</p>
                       <p className="text-xs text-slate-400">
                         {member.employeeNumber || "NIP/NI belum diisi"}
                       </p>

@@ -7,6 +7,7 @@ import {
   Landmark,
   LayoutDashboard,
   Settings,
+  UserRound,
   Users,
   Wallet,
   X,
@@ -97,6 +98,7 @@ const memberNav: NavSection[] = [
       { title: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
       { title: "Pengajuan Pinjaman", icon: FileCheck2, href: "/pengajuan-pinjaman" },
       { title: "Penarikan Sukarela", icon: Wallet, href: "/penarikan-sukarela" },
+      { title: "Profil Saya", icon: UserRound, href: "/profil" },
     ],
   },
 ];

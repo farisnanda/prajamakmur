@@ -124,8 +124,8 @@ export function MemberImport() {
           <Download size={16} /> Unduh template
         </a>
         <p className="mt-5 text-xs leading-relaxed text-slate-500">
-          Wajib diisi: Nomor Anggota, NIK (16 angka), Nama, dan Status
-          Kepegawaian. Isi NIP/NI agar akun login ikut dibuat. Jika satu baris bermasalah, tidak ada data yang masuk,
+          Wajib diisi: Nomor Anggota, Nama, dan Status Kepegawaian.
+          NIK boleh kosong dan dilengkapi nanti oleh anggota atau pengurus. Isi NIP/NI agar akun login ikut dibuat. Jika satu baris bermasalah, tidak ada data yang masuk,
           jadi tidak ada impor setengah jadi.
         </p>
       </aside>

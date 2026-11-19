@@ -166,7 +166,7 @@ export default async function MemberDetailPage({
           </div>
 
           <dl className="mt-6 grid gap-x-8 gap-y-4 border-t border-slate-100 pt-6 text-sm sm:grid-cols-2 lg:grid-cols-4">
-            <Info label="NIK" value={member.nik} />
+            <Info label="NIK" value={member.nik ?? "Belum diisi"} />
             <Info
               label="NIP / NI"
               value={member.employeeNumber || "Belum diisi"}

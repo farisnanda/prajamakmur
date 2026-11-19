@@ -70,8 +70,7 @@ export function MemberForm({
             defaultValue={defaults.nik}
             inputMode="numeric"
             maxLength={16}
-            placeholder="16 digit NIK"
-            required
+            placeholder="Opsional, 16 digit. Bisa dilengkapi nanti"
           />
         </Field>
         <Field label="NIP / NI PPPK" error={error("employeeNumber")}>

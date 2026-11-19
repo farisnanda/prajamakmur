@@ -15,7 +15,7 @@ export async function GET() {
   const sheet = workbook.addWorksheet("Anggota");
   sheet.columns = [
     { header: "Nomor Anggota", key: "memberNumber", width: 18 },
-    { header: "NIK", key: "nik", width: 22, style: { numFmt: "@" } },
+    { header: "NIK (opsional)", key: "nik", width: 22, style: { numFmt: "@" } },
     { header: "NIP/NI", key: "employeeNumber", width: 22, style: { numFmt: "@" } },
     { header: "Nama", key: "name", width: 30 },
     { header: "Status Kepegawaian", key: "employmentStatus", width: 22 },
@@ -58,7 +58,8 @@ export async function GET() {
   guide.getColumn(1).width = 100;
   [
     "Isi data anggota di lembar 'Anggota', mulai baris ke-2. Baris contoh boleh dihapus.",
-    "Wajib: Nomor Anggota, NIK (16 angka), Nama (min. 3 huruf), Status Kepegawaian.",
+    "Wajib: Nomor Anggota, Nama (min. 3 huruf), Status Kepegawaian. NIK boleh dikosongkan dan dilengkapi nanti; jika diisi harus 16 angka.",
+    "NIP/NI wajib diisi jika anggota ingin punya akun login (login memakai NIP/NI).",
     "Status Kepegawaian: PNS, PPPK, atau PPPK Paruh Waktu.",
     "Tanggal Bergabung: format dd/mm/yyyy. Jika kosong, dipakai tanggal hari ini.",
     "Status: Aktif atau Nonaktif. Jika kosong, dianggap Aktif.",

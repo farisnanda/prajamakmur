@@ -231,7 +231,7 @@ model SavingsTransaction {
 model Member {
   id               String           @id @default(cuid())
   memberNumber     String           @unique
-  nik              String           @unique
+  nik              String?          @unique
   employeeNumber   String?          @unique
   name             String
   employmentStatus EmploymentStatus

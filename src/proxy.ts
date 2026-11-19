@@ -45,6 +45,7 @@ export const config = {
     "/penarikan-sukarela/:path*",
     "/akuntansi/:path*",
     "/pengaturan/:path*",
+    "/profil/:path*",
     "/ganti-password",
   ],
 };

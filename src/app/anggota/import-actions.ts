@@ -31,7 +31,10 @@ const employmentMap: Record<string, "PNS" | "PPPK" | "PPPK_PARUH_WAKTU"> = {
 
 const rowSchema = z.object({
   memberNumber: z.string().min(1, "Nomor anggota kosong."),
-  nik: z.string().regex(/^\d{16}$/, "NIK harus 16 angka."),
+  nik: z
+    .string()
+    .regex(/^\d{16}$/, "NIK harus 16 angka, atau kosongkan.")
+    .optional(),
   employeeNumber: z.string().optional(),
   name: z.string().min(3, "Nama minimal 3 karakter."),
   employmentStatus: z.enum(["PNS", "PPPK", "PPPK_PARUH_WAKTU"], {
@@ -126,7 +129,7 @@ export async function importMembers(
     const activeText = texts[8].toLowerCase();
     const result = rowSchema.safeParse({
       memberNumber: texts[0],
-      nik: texts[1],
+      nik: texts[1] || undefined,
       employeeNumber: texts[2] || undefined,
       name: texts[3],
       employmentStatus: employmentMap[texts[4].toLowerCase()] ?? texts[4],
@@ -177,7 +180,11 @@ export async function importMembers(
       where: {
         OR: [
           { memberNumber: { in: parsedRows.map(({ data }) => data.memberNumber) } },
-          { nik: { in: parsedRows.map(({ data }) => data.nik) } },
+          {
+            nik: {
+              in: parsedRows.flatMap(({ data }) => (data.nik ? [data.nik] : [])),
+            },
+          },
           {
             employeeNumber: {
               in: parsedRows.flatMap(({ data }) => (data.employeeNumber ? [data.employeeNumber] : [])),
@@ -188,12 +195,12 @@ export async function importMembers(
       select: { memberNumber: true, nik: true, employeeNumber: true },
     });
     const numbers = new Set(existing.map((m) => m.memberNumber));
-    const niks = new Set(existing.map((m) => m.nik));
+    const niks = new Set(existing.flatMap((m) => (m.nik ? [m.nik] : [])));
     const employees = new Set(existing.flatMap((m) => (m.employeeNumber ? [m.employeeNumber] : [])));
     for (const { row, data } of parsedRows) {
       if (numbers.has(data.memberNumber))
         rowErrors.push({ row, message: `Nomor anggota ${data.memberNumber} sudah terdaftar.` });
-      if (niks.has(data.nik)) rowErrors.push({ row, message: `NIK ${data.nik} sudah terdaftar.` });
+      if (data.nik && niks.has(data.nik)) rowErrors.push({ row, message: `NIK ${data.nik} sudah terdaftar.` });
       if (data.employeeNumber && employees.has(data.employeeNumber))
         rowErrors.push({ row, message: `NIP/NI ${data.employeeNumber} sudah terdaftar.` });
     }
@@ -215,7 +222,7 @@ export async function importMembers(
   const accountRows = createAccounts
     ? await Promise.all(
         withNip.map(async ({ data }) => ({
-          nik: data.nik,
+          memberNumber: data.memberNumber,
           name: data.name,
           email: `${data.employeeNumber!.toLowerCase()}@anggota.praja-makmur.local`,
           password: await bcrypt.hash(data.employeeNumber!, 10),
@@ -235,10 +242,12 @@ export async function importMembers(
     });
     if (!accountRows.length) return;
     const members = await tx.member.findMany({
-      where: { nik: { in: accountRows.map((row) => row.nik) } },
-      select: { id: true, nik: true },
+      where: { memberNumber: { in: accountRows.map((row) => row.memberNumber) } },
+      select: { id: true, memberNumber: true },
     });
-    const idByNik = new Map(members.map((member) => [member.nik, member.id]));
+    const idByNumber = new Map(
+      members.map((member) => [member.memberNumber, member.id]),
+    );
     const created = await tx.user.createMany({
       data: accountRows.map((row) => ({
         name: row.name,
@@ -247,7 +256,7 @@ export async function importMembers(
         role: "ANGGOTA" as const,
         isActive: true,
         mustChangePassword: true,
-        memberId: idByNik.get(row.nik),
+        memberId: idByNumber.get(row.memberNumber),
       })),
       skipDuplicates: true,
     });

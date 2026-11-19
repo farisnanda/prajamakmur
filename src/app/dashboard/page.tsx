@@ -205,6 +205,20 @@ function MemberDashboard({
         subtitle={`${member.memberNumber} · ${member.employmentStatus === "PPPK_PARUH_WAKTU" ? "PPPK Paruh Waktu" : member.employmentStatus}`}
       />
       <main className="min-h-screen bg-slate-50 px-4 pb-12 pt-24 sm:px-6 lg:ml-[280px] lg:px-10 lg:pt-28">
+        {!member.nik && (
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
+            <p>
+              <b className="font-semibold">Lengkapi data Anda.</b> NIK belum
+              terisi di data keanggotaan.
+            </p>
+            <Link
+              href="/profil"
+              className="inline-flex h-9 items-center rounded-xl bg-amber-600 px-4 text-sm font-semibold text-white hover:bg-amber-700"
+            >
+              Lengkapi di Profil Saya
+            </Link>
+          </div>
+        )}
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <MemberStat
             label="Simpanan Pokok"

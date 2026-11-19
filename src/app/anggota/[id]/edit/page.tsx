@@ -51,7 +51,7 @@ export default async function EditMemberPage({
             action={action}
             defaults={{
               memberNumber: member.memberNumber,
-              nik: member.nik,
+              nik: member.nik ?? "",
               employeeNumber: member.employeeNumber,
               name: member.name,
               employmentStatus: member.employmentStatus,
