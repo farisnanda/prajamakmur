@@ -11,6 +11,9 @@ import { notFound, redirect } from "next/navigation";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { authOptions } from "@/lib/auth";
+import { MandatorySavingsForm } from "@/components/members/MandatorySavingsForm";
+import { RunningLoanForm } from "@/components/members/RunningLoanForm";
+import { VoluntarySavingsForm } from "@/components/members/VoluntarySavingsForm";
 import { Pagination } from "@/components/shared/Pagination";
 import { PAGE_SIZE, clampPage, parsePage } from "@/lib/listing";
 import { prisma } from "@/lib/prisma";
@@ -47,6 +50,13 @@ const date = (value: Date | null) =>
     ? new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(value)
     : "-";
 
+/** Tanggal hari ini (zona waktu server) sebagai YYYY-MM-DD. */
+function localToday() {
+  return new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 10);
+}
+
 const tabs = [
   { key: "pinjaman", label: "Pinjaman" },
   { key: "simpanan", label: "Simpanan" },
@@ -57,7 +67,16 @@ export default async function MemberDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string; lp?: string; pp?: string; wp?: string }>;
+  searchParams: Promise<{
+    tab?: string;
+    lp?: string;
+    pp?: string;
+    wp?: string;
+    sp?: string;
+    success?: string;
+    n?: string;
+    skip?: string;
+  }>;
 }) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
@@ -67,6 +86,9 @@ export default async function MemberDetailPage({
   const query = await searchParams;
   const tab = query.tab === "simpanan" ? "simpanan" : "pinjaman";
 
+  const savingsSetting = await prisma.savingsSetting.findUnique({
+    where: { id: "default" },
+  });
   const member = await prisma.member.findUnique({
     where: { id },
     include: {
@@ -75,7 +97,6 @@ export default async function MemberDetailPage({
         include: { payments: { orderBy: { installmentNumber: "asc" } } },
       },
       savings: {
-        where: { savingsType: { in: ["POKOK", "WAJIB"] } },
         orderBy: { transactionDate: "desc" },
       },
     },
@@ -102,7 +123,7 @@ export default async function MemberDetailPage({
   );
 
   // --- Simpanan ---
-  const net = (type: "POKOK" | "WAJIB") =>
+  const net = (type: "POKOK" | "WAJIB" | "SUKARELA") =>
     member.savings
       .filter((row) => row.savingsType === type)
       .reduce(
@@ -113,11 +134,15 @@ export default async function MemberDetailPage({
       );
   const principalSavings = net("POKOK");
   const mandatorySavings = net("WAJIB");
+  const voluntarySavings = net("SUKARELA");
   const principalRows = member.savings.filter(
     (row) => row.savingsType === "POKOK",
   );
   const mandatoryRows = member.savings.filter(
     (row) => row.savingsType === "WAJIB",
+  );
+  const voluntaryRows = member.savings.filter(
+    (row) => row.savingsType === "SUKARELA",
   );
 
   const slicePage = <T,>(rows: T[], raw: string | undefined) => {
@@ -127,12 +152,22 @@ export default async function MemberDetailPage({
   const loansPaged = slicePage(member.loans, query.lp);
   const principalPaged = slicePage(principalRows, query.pp);
   const mandatoryPaged = slicePage(mandatoryRows, query.wp);
+  const voluntaryPaged = slicePage(voluntaryRows, query.sp);
+  const today = localToday();
+  const mandatoryDefault =
+    member.employmentStatus === "PNS"
+      ? (savingsSetting?.mandatoryPnsAmount.toNumber() ?? 300_000)
+      : (savingsSetting?.mandatoryPppkAmount.toNumber() ?? 200_000);
   const detailPath = `/anggota/${member.id}`;
+  const canAddLoan = ["SUPER_ADMIN", "ADMIN_KOPERASI", "BENDAHARA"].includes(
+    session.user.role,
+  );
   const keep = (extra: Record<string, string | undefined>) => ({
     tab,
     lp: query.lp,
     pp: query.pp,
     wp: query.wp,
+    sp: query.sp,
     ...extra,
   });
 
@@ -199,7 +234,7 @@ export default async function MemberDetailPage({
         </section>
 
         {/* Summary */}
-        <section className="mt-5 grid grid-cols-2 gap-4 xl:grid-cols-4">
+        <section className="mt-5 grid grid-cols-2 gap-4 xl:grid-cols-5">
           <Stat
             icon={Landmark}
             label="Sisa pokok pinjaman"
@@ -219,6 +254,11 @@ export default async function MemberDetailPage({
             icon={Wallet}
             label="Simpanan wajib"
             value={rupiah(mandatorySavings)}
+          />
+          <Stat
+            icon={Wallet}
+            label="Simpanan sukarela"
+            value={rupiah(voluntarySavings)}
           />
         </section>
 
@@ -240,8 +280,50 @@ export default async function MemberDetailPage({
           ))}
         </nav>
 
+        {query.success === "mandatory" && (
+          <div className="mb-5 rounded-2xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">
+            {Number(query.n) > 0
+              ? `${Number(query.n)} bulan simpanan wajib berhasil dicatat.`
+              : "Tidak ada bulan baru yang dicatat."}
+            {Number(query.skip) > 0 &&
+              ` ${Number(query.skip)} bulan dilewati karena sudah tercatat.`}
+          </div>
+        )}
+        {query.success === "voluntary" && (
+          <div className="mb-5 rounded-2xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">
+            Saldo simpanan sukarela berhasil dicatat.
+          </div>
+        )}
+        {query.success === "loan" && (
+          <div className="mb-5 rounded-2xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">
+            Pinjaman berhasil ditambahkan.
+          </div>
+        )}
+
         {tab === "pinjaman" ? (
           <div className="space-y-6">
+            {canAddLoan && member.isActive && (
+              <details className="group rounded-card border border-slate-200/70 bg-white shadow-sm">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 sm:p-7">
+                  <span>
+                    <span className="block text-base font-semibold text-slate-900 sm:text-lg">
+                      Tambah pinjaman
+                    </span>
+                    <span className="mt-0.5 block text-sm text-slate-500">
+                      Catat pinjaman yang sudah berjalan (data dari Excel): jumlah, tenor, dan
+                      mulai kapan.
+                    </span>
+                  </span>
+                  <span className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white group-open:bg-slate-200 group-open:text-slate-700">
+                    <span className="group-open:hidden">+ Tambah</span>
+                    <span className="hidden group-open:inline">Tutup</span>
+                  </span>
+                </summary>
+                <div className="border-t border-slate-100 p-5 sm:p-7">
+                  <RunningLoanForm memberId={member.id} />
+                </div>
+              </details>
+            )}
             <Panel
               title="Pinjaman berjalan"
               note="Pinjaman yang sudah cair dan masih diangsur"
@@ -492,6 +574,69 @@ export default async function MemberDetailPage({
               }
               empty="Belum ada setoran simpanan wajib."
             />
+            <div className="space-y-6 xl:col-span-2">
+              <SavingsPanel
+                title="Simpanan sukarela"
+                note="Setoran dan penarikan, nominal bebas"
+                total={voluntarySavings}
+                rows={voluntaryPaged.rows}
+                footer={
+                  <Pagination
+                    basePath={detailPath}
+                    pageParam="sp"
+                    query={keep({ sp: undefined })}
+                    page={voluntaryPaged.page}
+                    total={voluntaryRows.length}
+                  />
+                }
+                empty="Belum ada simpanan sukarela."
+              />
+              {canAddLoan && member.isActive && (
+                <details className="group rounded-card border border-slate-200/70 bg-white shadow-sm">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 sm:p-7">
+                    <span>
+                      <span className="block text-base font-semibold text-slate-900 sm:text-lg">
+                        Tambah simpanan wajib
+                      </span>
+                      <span className="mt-0.5 block text-sm text-slate-500">
+                        Catat simpanan wajib bulanan yang sudah dibayar (data dari Excel).
+                      </span>
+                    </span>
+                    <span className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white group-open:bg-slate-200 group-open:text-slate-700">
+                      <span className="group-open:hidden">+ Tambah</span>
+                      <span className="hidden group-open:inline">Tutup</span>
+                    </span>
+                  </summary>
+                  <div className="border-t border-slate-100 p-5 sm:p-7">
+                    <MandatorySavingsForm
+                      memberId={member.id}
+                      defaultAmount={mandatoryDefault}
+                    />
+                  </div>
+                </details>
+              )}
+              {canAddLoan && member.isActive && (
+                <details className="group rounded-card border border-slate-200/70 bg-white shadow-sm">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 sm:p-7">
+                    <span>
+                      <span className="block text-base font-semibold text-slate-900 sm:text-lg">
+                        Tambah simpanan sukarela
+                      </span>
+                      <span className="mt-0.5 block text-sm text-slate-500">
+                        Catat saldo simpanan sukarela yang sudah ada (data dari Excel).
+                      </span>
+                    </span>
+                    <span className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white group-open:bg-slate-200 group-open:text-slate-700">
+                      <span className="group-open:hidden">+ Tambah</span>
+                      <span className="hidden group-open:inline">Tutup</span>
+                    </span>
+                  </summary>
+                  <div className="border-t border-slate-100 p-5 sm:p-7">
+                    <VoluntarySavingsForm memberId={member.id} today={today} />
+                  </div>
+                </details>
+              )}
+            </div>
           </div>
         )}
       </main>

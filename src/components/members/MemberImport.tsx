@@ -73,6 +73,11 @@ export function MemberImport() {
             <CheckCircle2 size={20} className="mt-0.5 shrink-0" />
             <div>
               <p className="font-semibold">{state.message}</p>
+              {!!state.principalSavings && (
+                <p className="mt-1">
+                  {state.principalSavings} simpanan pokok otomatis dicatat (masuk Kas Bank).
+                </p>
+              )}
               {state.accounts !== undefined && state.accounts > 0 && (
                 <p className="mt-1">{state.accounts} akun login dibuat.</p>
               )}
@@ -124,7 +129,7 @@ export function MemberImport() {
           <Download size={16} /> Unduh template
         </a>
         <p className="mt-5 text-xs leading-relaxed text-slate-500">
-          Wajib diisi: Nomor Anggota, Nama, dan Status Kepegawaian.
+          Wajib diisi: Nama dan Status Kepegawaian. Nomor Anggota dikosongkan saja, nanti dibuat otomatis berurutan.
           NIK boleh kosong dan dilengkapi nanti oleh anggota atau pengurus. Isi NIP/NI agar akun login ikut dibuat. Jika satu baris bermasalah, tidak ada data yang masuk,
           jadi tidak ada impor setengah jadi.
         </p>

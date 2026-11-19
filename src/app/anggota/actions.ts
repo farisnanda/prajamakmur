@@ -4,8 +4,11 @@ import { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
+import { nextMemberNumber } from "@/lib/memberNumber";
+import { recordPrincipalSavings } from "@/lib/principalSavings";
 import { prisma } from "@/lib/prisma";
 
 const allowedRoles = new Set(["SUPER_ADMIN", "ADMIN_KOPERASI", "PENGURUS"]);
@@ -36,11 +39,12 @@ async function authorizeMemberManagement() {
   if (!session || !allowedRoles.has(session.user.role)) {
     throw new Error("Anda tidak memiliki akses untuk mengelola anggota.");
   }
+  return session;
 }
 
-function parseMember(formData: FormData) {
+function parseMember(formData: FormData, memberNumber?: string) {
   return memberSchema.safeParse({
-    memberNumber: formData.get("memberNumber"),
+    memberNumber: memberNumber ?? formData.get("memberNumber"),
     nik: formData.get("nik"),
     employeeNumber: formData.get("employeeNumber"),
     name: formData.get("name"),
@@ -66,26 +70,47 @@ export async function createMember(
   _state: MemberFormState,
   formData: FormData,
 ): Promise<MemberFormState> {
-  await authorizeMemberManagement();
-  const parsed = parseMember(formData);
-  if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
+  const session = await authorizeMemberManagement();
 
-  try {
-    await prisma.member.create({
-      data: {
-        ...parsed.data,
-        nik: parsed.data.nik || null,
-        employeeNumber: parsed.data.employeeNumber || null,
-        phone: parsed.data.phone || null,
-        address: parsed.data.address || null,
-      },
-    });
-  } catch (error) {
-    return databaseError(error);
+  // Nomor anggota selalu dibuat otomatis (berurutan); isian dari form diabaikan.
+  // Dicoba ulang bila dua pengurus menyimpan pada saat bersamaan.
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const memberNumber = await nextMemberNumber(prisma);
+    const parsed = parseMember(formData, memberNumber);
+    if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
+
+    try {
+      // Anggota aktif otomatis memiliki simpanan pokok (kas dan jurnal ikut tercatat).
+      await prisma.$transaction(async (tx) => {
+        const member = await tx.member.create({
+          data: {
+            ...parsed.data,
+            nik: parsed.data.nik || null,
+            employeeNumber: parsed.data.employeeNumber || null,
+            phone: parsed.data.phone || null,
+            address: parsed.data.address || null,
+          },
+        });
+        if (member.isActive) {
+          await recordPrincipalSavings(tx, {
+            members: [{ id: member.id, name: member.name }],
+            createdById: session.user.id,
+          });
+        }
+      });
+      revalidatePath("/anggota");
+      redirect("/anggota?success=created");
+    } catch (error) {
+      if (isRedirectError(error)) throw error;
+      const clash =
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002" &&
+        JSON.stringify(error.meta ?? {}).includes("memberNumber");
+      if (clash && attempt < 3) continue;
+      return databaseError(error);
+    }
   }
-
-  revalidatePath("/anggota");
-  redirect("/anggota?success=created");
+  return { message: "Data belum dapat disimpan. Silakan coba lagi." };
 }
 
 export async function updateMember(

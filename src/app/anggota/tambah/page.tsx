@@ -8,6 +8,8 @@ import { Topbar } from "@/components/layout/Topbar";
 import { MemberForm } from "@/components/members/MemberForm";
 import { MemberImport } from "@/components/members/MemberImport";
 import { authOptions } from "@/lib/auth";
+import { nextMemberNumber } from "@/lib/memberNumber";
+import { prisma } from "@/lib/prisma";
 
 const modes = [
   { key: "manual", label: "Input Manual", href: "/anggota/tambah" },
@@ -24,6 +26,8 @@ export default async function AddMemberPage({
   if (session.user.role === "ANGGOTA") redirect("/dashboard");
 
   const mode = (await searchParams).mode === "import" ? "import" : "manual";
+  const upcomingNumber =
+    mode === "manual" ? await nextMemberNumber(prisma) : undefined;
 
   return (
     <>
@@ -72,7 +76,7 @@ export default async function AddMemberPage({
           {mode === "import" ? (
             <MemberImport />
           ) : (
-            <MemberForm action={createMember} />
+            <MemberForm action={createMember} autoNumber={upcomingNumber} />
           )}
         </section>
       </main>

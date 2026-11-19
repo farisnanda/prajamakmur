@@ -23,12 +23,15 @@ const fieldClass =
 export function MemberForm({
   action,
   defaults = {},
+  autoNumber,
 }: {
   action: (
     state: MemberFormState,
     formData: FormData,
   ) => Promise<MemberFormState>;
   defaults?: MemberDefaults;
+  /** Tampilkan nomor anggota otomatis (read-only) alih-alih isian manual. */
+  autoNumber?: string;
 }) {
   const [state, formAction, pending] = useActionState(action, initialState);
   const error = (name: string) => state.errors?.[name]?.[0];
@@ -46,13 +49,27 @@ export function MemberForm({
 
       <div className="grid gap-5 md:grid-cols-2">
         <Field label="Nomor Anggota" error={error("memberNumber")}>
-          <input
-            className={fieldClass}
-            name="memberNumber"
-            defaultValue={defaults.memberNumber}
-            placeholder="PM-0001"
-            required
-          />
+          {autoNumber ? (
+            <>
+              <input
+                className={`${fieldClass} cursor-not-allowed font-semibold tabular-nums text-slate-700`}
+                value={autoNumber}
+                readOnly
+                aria-describedby="member-number-hint"
+              />
+              <span id="member-number-hint" className="mt-1.5 block text-xs text-slate-500">
+                Dibuat otomatis saat disimpan, melanjutkan nomor terakhir.
+              </span>
+            </>
+          ) : (
+            <input
+              className={fieldClass}
+              name="memberNumber"
+              defaultValue={defaults.memberNumber}
+              placeholder="PM-0001"
+              required
+            />
+          )}
         </Field>
         <Field label="Nama Lengkap" error={error("name")}>
           <input

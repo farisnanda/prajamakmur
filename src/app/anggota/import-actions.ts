@@ -6,6 +6,8 @@ import { getServerSession } from "next-auth";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
+import { nextMemberNumbers } from "@/lib/memberNumber";
+import { recordPrincipalSavings } from "@/lib/principalSavings";
 import { prisma } from "@/lib/prisma";
 
 const allowedRoles = new Set(["SUPER_ADMIN", "ADMIN_KOPERASI", "PENGURUS"]);
@@ -16,6 +18,7 @@ export type ImportState = {
   status?: "success" | "error";
   message?: string;
   imported?: number;
+  principalSavings?: number;
   accounts?: number;
   withoutNip?: number;
   rowErrors?: { row: number; message: string }[];
@@ -30,7 +33,8 @@ const employmentMap: Record<string, "PNS" | "PPPK" | "PPPK_PARUH_WAKTU"> = {
 };
 
 const rowSchema = z.object({
-  memberNumber: z.string().min(1, "Nomor anggota kosong."),
+  // Kosong = dibuat otomatis, melanjutkan nomor terakhir.
+  memberNumber: z.string().optional(),
   nik: z
     .string()
     .regex(/^\d{16}$/, "NIK harus 16 angka, atau kosongkan.")
@@ -128,7 +132,7 @@ export async function importMembers(
     const joined = cellDate(excelRow.getCell(8));
     const activeText = texts[8].toLowerCase();
     const result = rowSchema.safeParse({
-      memberNumber: texts[0],
+      memberNumber: texts[0] || undefined,
       nik: texts[1] || undefined,
       employeeNumber: texts[2] || undefined,
       name: texts[3],
@@ -179,7 +183,11 @@ export async function importMembers(
     const existing = await prisma.member.findMany({
       where: {
         OR: [
-          { memberNumber: { in: parsedRows.map(({ data }) => data.memberNumber) } },
+          {
+            memberNumber: {
+              in: parsedRows.flatMap(({ data }) => (data.memberNumber ? [data.memberNumber] : [])),
+            },
+          },
           {
             nik: {
               in: parsedRows.flatMap(({ data }) => (data.nik ? [data.nik] : [])),
@@ -198,7 +206,7 @@ export async function importMembers(
     const niks = new Set(existing.flatMap((m) => (m.nik ? [m.nik] : [])));
     const employees = new Set(existing.flatMap((m) => (m.employeeNumber ? [m.employeeNumber] : [])));
     for (const { row, data } of parsedRows) {
-      if (numbers.has(data.memberNumber))
+      if (data.memberNumber && numbers.has(data.memberNumber))
         rowErrors.push({ row, message: `Nomor anggota ${data.memberNumber} sudah terdaftar.` });
       if (data.nik && niks.has(data.nik)) rowErrors.push({ row, message: `NIK ${data.nik} sudah terdaftar.` });
       if (data.employeeNumber && employees.has(data.employeeNumber))
@@ -222,7 +230,7 @@ export async function importMembers(
   const accountRows = createAccounts
     ? await Promise.all(
         withNip.map(async ({ data }) => ({
-          memberNumber: data.memberNumber,
+          employeeNumber: data.employeeNumber!,
           name: data.name,
           email: `${data.employeeNumber!.toLowerCase()}@anggota.praja-makmur.local`,
           password: await bcrypt.hash(data.employeeNumber!, 10),
@@ -231,23 +239,48 @@ export async function importMembers(
     : [];
 
   let accounts = 0;
+  let principalCount = 0;
   await prisma.$transaction(async (tx) => {
+    // Nomor anggota yang dikosongkan diisi otomatis, berurutan setelah nomor terakhir.
+    const given = parsedRows.flatMap(({ data }) => (data.memberNumber ? [data.memberNumber] : []));
+    const blanks = parsedRows.filter(({ data }) => !data.memberNumber);
+    const generated = await nextMemberNumbers(tx, blanks.length, given);
+    let cursor = 0;
+
+    const numbers: string[] = [];
     await tx.member.createMany({
-      data: parsedRows.map(({ data }) => ({
+      data: parsedRows.map(({ data }) => {
+        const memberNumber = data.memberNumber ?? generated[cursor++];
+        numbers.push(memberNumber);
+        return {
         ...data,
+        memberNumber,
+        nik: data.nik ?? null,
         employeeNumber: data.employeeNumber ?? null,
         phone: data.phone ?? null,
         address: data.address ?? null,
-      })),
+        };
+      }),
     });
+
+    // Anggota aktif otomatis memiliki simpanan pokok (kas dan jurnal ikut tercatat).
+    const activeMembers = await tx.member.findMany({
+      where: { memberNumber: { in: numbers }, isActive: true },
+      select: { id: true, name: true },
+    });
+    principalCount = (
+      await recordPrincipalSavings(tx, {
+        members: activeMembers,
+        createdById: session.user.id,
+      })
+    ).count;
+
     if (!accountRows.length) return;
     const members = await tx.member.findMany({
-      where: { memberNumber: { in: accountRows.map((row) => row.memberNumber) } },
-      select: { id: true, memberNumber: true },
+      where: { employeeNumber: { in: accountRows.map((row) => row.employeeNumber) } },
+      select: { id: true, employeeNumber: true },
     });
-    const idByNumber = new Map(
-      members.map((member) => [member.memberNumber, member.id]),
-    );
+    const idByEmployee = new Map(members.map((member) => [member.employeeNumber, member.id]));
     const created = await tx.user.createMany({
       data: accountRows.map((row) => ({
         name: row.name,
@@ -256,12 +289,12 @@ export async function importMembers(
         role: "ANGGOTA" as const,
         isActive: true,
         mustChangePassword: true,
-        memberId: idByNumber.get(row.memberNumber),
+        memberId: idByEmployee.get(row.employeeNumber),
       })),
       skipDuplicates: true,
     });
     accounts = created.count;
-  });
+  }, { timeout: 60_000, maxWait: 10_000 });
 
   revalidatePath("/anggota");
   revalidatePath("/pengaturan/akun");
@@ -271,6 +304,7 @@ export async function importMembers(
     imported: parsedRows.length,
     accounts,
     withoutNip,
+    principalSavings: principalCount,
     message: `${parsedRows.length} anggota berhasil diimpor.`,
   };
 }

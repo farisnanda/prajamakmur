@@ -14,7 +14,7 @@ export async function GET() {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Anggota");
   sheet.columns = [
-    { header: "Nomor Anggota", key: "memberNumber", width: 18 },
+    { header: "Nomor Anggota (kosongkan = otomatis)", key: "memberNumber", width: 26 },
     { header: "NIK (opsional)", key: "nik", width: 22, style: { numFmt: "@" } },
     { header: "NIP/NI", key: "employeeNumber", width: 22, style: { numFmt: "@" } },
     { header: "Nama", key: "name", width: 30 },
@@ -27,7 +27,7 @@ export async function GET() {
   sheet.getRow(1).font = { bold: true };
   sheet.views = [{ state: "frozen", ySplit: 1 }];
   sheet.addRow({
-    memberNumber: "PM-001",
+    memberNumber: "",
     nik: "3578010101900001",
     employeeNumber: "",
     name: "Contoh Nama Anggota",
@@ -58,7 +58,7 @@ export async function GET() {
   guide.getColumn(1).width = 100;
   [
     "Isi data anggota di lembar 'Anggota', mulai baris ke-2. Baris contoh boleh dihapus.",
-    "Wajib: Nomor Anggota, Nama (min. 3 huruf), Status Kepegawaian. NIK boleh dikosongkan dan dilengkapi nanti; jika diisi harus 16 angka.",
+    "Wajib: Nama (min. 3 huruf) dan Status Kepegawaian. Nomor Anggota boleh dikosongkan: sistem mengisinya otomatis berurutan setelah nomor terakhir. NIK boleh dikosongkan dan dilengkapi nanti; jika diisi harus 16 angka.",
     "NIP/NI wajib diisi jika anggota ingin punya akun login (login memakai NIP/NI).",
     "Status Kepegawaian: PNS, PPPK, atau PPPK Paruh Waktu.",
     "Tanggal Bergabung: format dd/mm/yyyy. Jika kosong, dipakai tanggal hari ini.",
