@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Calculator } from "lucide-react";
+import { annuityPayment, annuitySchedule } from "@/lib/annuity";
 
 const rupiah = (value: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -32,11 +33,7 @@ export function LoanSimulator() {
   const safeAmount = Math.min(Math.max(amount || 0, 0), maximum);
   const monthlyPayment = useMemo(() => {
     if (!safeAmount || !months) return 0;
-    const rate = annualRate / 100 / 12;
-    if (rate === 0) return safeAmount / months;
-    return (
-      (safeAmount * rate * (1 + rate) ** months) / ((1 + rate) ** months - 1)
-    );
+    return annuityPayment(safeAmount, annualRate, months);
   }, [safeAmount, months, annualRate]);
   const totalPayment = monthlyPayment * months;
   const schedule = useMemo(() => {
@@ -56,32 +53,20 @@ export function LoanSimulator() {
       payment: 0,
       balance: safeAmount,
     });
-    let balance = safeAmount;
-    const monthlyRate = annualRate / 100 / 12;
-    for (
-      let installment = 1;
-      installment <= months && balance > 0;
-      installment += 1
-    ) {
+    // Seluruh bunga dibayar lebih dulu dari cicilan awal; sisanya mengurangi pokok.
+    for (const row of annuitySchedule(safeAmount, annualRate, months)) {
       const period = new Date(firstPeriod);
-      period.setMonth(firstPeriod.getMonth() + installment);
-      const interest = balance * monthlyRate;
-      const principal =
-        installment === months
-          ? balance
-          : Math.min(monthlyPayment - interest, balance);
-      const payment = principal + interest;
-      balance = Math.max(0, balance - principal);
+      period.setMonth(firstPeriod.getMonth() + row.number);
       rows.push({
         period: periodLabel(period),
-        interest,
-        principal,
-        payment,
-        balance,
+        interest: row.interestComponent,
+        principal: row.principalComponent,
+        payment: row.amount,
+        balance: row.remaining,
       });
     }
     return rows;
-  }, [safeAmount, months, annualRate, monthlyPayment]);
+  }, [safeAmount, months, annualRate]);
   const scheduleTotals = useMemo(
     () =>
       schedule
@@ -191,7 +176,7 @@ export function LoanSimulator() {
               Tabel Simulasi Angsuran
             </h4>
             <p className="text-xs text-slate-500">
-              Rincian bunga anuitas dan pengurangan pokok setiap bulan
+              Bunga dibayar lebih dulu dari cicilan awal, sisanya mengurangi pokok
             </p>
           </div>
           <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">

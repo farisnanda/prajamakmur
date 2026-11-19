@@ -83,6 +83,7 @@ const adminNav: NavSection[] = [
         children: [
           { title: "Landing Page", href: "/pengaturan" },
           { title: "Nominal Simpanan", href: "/pengaturan/simpanan" },
+          { title: "Aturan Pinjaman", href: "/pengaturan/pinjaman" },
           { title: "Akun Pengguna", href: "/pengaturan/akun" },
           { title: "Berita & Kegiatan", href: "/pengaturan/berita" },
         ],

@@ -6,42 +6,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
+import { allocatePayment } from "@/lib/annuity";
 import { KAS_UMUM_BANK } from "@/lib/cashAccounts";
 import { prisma } from "@/lib/prisma";
-
-function allocateAnnuity(
-  principal: number,
-  annualRate: number,
-  monthlyPayment: number,
-  paidPrincipal: number,
-  amount: number,
-) {
-  let remainingPrincipal = Math.max(0, principal - paidPrincipal),
-    remainingPayment = amount,
-    principalComponent = 0,
-    interestComponent = 0;
-  const rate = annualRate / 100 / 12;
-  for (
-    let i = 0;
-    i < 100 && remainingPayment > 0.005 && remainingPrincipal > 0.005;
-    i++
-  ) {
-    const chunk = Math.min(
-        remainingPayment,
-        monthlyPayment || remainingPayment,
-      ),
-      interest = Math.min(chunk, remainingPrincipal * rate),
-      principalPart = Math.min(remainingPrincipal, chunk - interest);
-    interestComponent += interest;
-    principalComponent += principalPart;
-    remainingPrincipal -= principalPart;
-    remainingPayment -= chunk;
-  }
-  if (remainingPayment > 0) {
-    interestComponent += remainingPayment;
-  }
-  return { principalComponent, interestComponent };
-}
 
 export async function createLoanInstallmentPayments(formData: FormData) {
   const session = await getServerSession(authOptions);
@@ -76,8 +43,9 @@ export async function createLoanInstallmentPayments(formData: FormData) {
     (sum, payment) => sum + payment.amount.toNumber(),
     0,
   );
-  let paidPrincipal = loan.payments.reduce(
-    (sum, payment) => sum + payment.principalComponent.toNumber(),
+  // Seluruh bunga dibayar lebih dulu dari cicilan awal; sisanya mengurangi pokok.
+  let paidInterest = loan.payments.reduce(
+    (sum, payment) => sum + payment.interestComponent.toNumber(),
     0,
   );
   if (paid >= total - 1) redirect("/pinjaman/pembayaran?error=exceeds");
@@ -95,13 +63,13 @@ export async function createLoanInstallmentPayments(formData: FormData) {
     const outstanding = Math.max(0, total - paid);
     if (outstanding <= 0) break;
     const amount = Math.min(monthly, outstanding);
-    const { principalComponent, interestComponent } = allocateAnnuity(
-      loan.principalAmount.toNumber(),
-      loan.interestRate.toNumber(),
+    const { principalComponent, interestComponent } = allocatePayment({
+      principal: loan.principalAmount.toNumber(),
       monthly,
-      paidPrincipal,
+      months: loan.tenureMonths,
+      paidInterest,
       amount,
-    );
+    });
     rows.push({
       receiptNumber: `ANG-${Date.now()}-${i}-${crypto.randomUUID().slice(0, 5).toUpperCase()}`,
       loanId: loan.id,
@@ -113,7 +81,7 @@ export async function createLoanInstallmentPayments(formData: FormData) {
       note: parsed.data.note || null,
     });
     paid += amount;
-    paidPrincipal += principalComponent;
+    paidInterest += interestComponent;
   }
   if (!rows.length) redirect("/pinjaman/pembayaran?error=exceeds");
   const totalAmount = rows.reduce((sum, row) => sum + row.amount.toNumber(), 0);
@@ -211,7 +179,7 @@ export async function createBulkLoanPayments(formData: FormData) {
       tenureMonths: true,
       monthlyPayment: true,
       member: { select: { name: true } },
-      payments: { select: { amount: true, principalComponent: true } },
+      payments: { select: { amount: true, interestComponent: true } },
     },
   });
   const existing = await prisma.loanPayment.findMany({
@@ -229,18 +197,18 @@ export async function createBulkLoanPayments(formData: FormData) {
       0,
     );
     const outstanding = Math.max(0, monthly * loan.tenureMonths - paid);
-    const paidPrincipal = loan.payments.reduce(
-      (sum, payment) => sum + payment.principalComponent.toNumber(),
+    const paidInterest = loan.payments.reduce(
+      (sum, payment) => sum + payment.interestComponent.toNumber(),
       0,
     );
     const amount = Math.min(monthly, outstanding),
-      allocation = allocateAnnuity(
-        loan.principalAmount.toNumber(),
-        loan.interestRate.toNumber(),
+      allocation = allocatePayment({
+        principal: loan.principalAmount.toNumber(),
         monthly,
-        paidPrincipal,
+        months: loan.tenureMonths,
+        paidInterest,
         amount,
-      ),
+      }),
       interestComponent = allocation.interestComponent;
     return !existingIds.has(loan.id) && outstanding > 0
       ? [

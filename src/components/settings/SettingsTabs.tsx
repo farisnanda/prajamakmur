@@ -3,6 +3,7 @@ import Link from "next/link";
 const tabs = [
   { key: "landing", href: "/pengaturan", label: "Konten Landing" },
   { key: "simpanan", href: "/pengaturan/simpanan", label: "Nominal Simpanan" },
+  { key: "pinjaman", href: "/pengaturan/pinjaman", label: "Aturan Pinjaman" },
   { key: "berita", href: "/pengaturan/berita", label: "Berita & Kegiatan" },
   { key: "akun", href: "/pengaturan/akun", label: "Akun Pengguna" },
 ] as const;

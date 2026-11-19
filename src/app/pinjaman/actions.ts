@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { annuityPayment } from "@/lib/annuity";
 import { authOptions } from "@/lib/auth";
 import { KAS_UMUM_BANK } from "@/lib/cashAccounts";
 import { prisma } from "@/lib/prisma";
@@ -197,13 +198,12 @@ export async function disburseLoan(formData: FormData) {
     .safeParse(formData.get("transferReference"));
   if (!referenceResult.success) redirect("/pinjaman?error=invalid-reference");
   const reference = referenceResult.data;
-  const principal = loan.principalAmount.toNumber(),
-    rate = loan.interestRate.toNumber() / 100 / 12;
-  const payment = Math.ceil(
-    rate === 0
-      ? principal / loan.tenureMonths
-      : (principal * rate * (1 + rate) ** loan.tenureMonths) /
-          ((1 + rate) ** loan.tenureMonths - 1),
+  const principal = loan.principalAmount.toNumber();
+  // Cicilan sama dengan hasil simulasi anuitas (dibulatkan ke rupiah terdekat).
+  const payment = annuityPayment(
+    principal,
+    loan.interestRate.toNumber(),
+    loan.tenureMonths,
   );
   const disbursedNow = new Date();
   // Angsuran pertama jatuh tempo di awal bulan berikutnya setelah pengajuan
@@ -323,14 +323,11 @@ export async function approveLoan(formData: FormData) {
   if (!loan || loan.status !== "SUBMITTED") redirect("/pinjaman?error=invalid");
 
   const principal = loan.principalAmount.toNumber();
-  const monthlyRate = loan.interestRate.toNumber() / 100 / 12;
-  const monthlyPayment =
-    monthlyRate === 0
-      ? Math.ceil(principal / loan.tenureMonths)
-      : Math.ceil(
-          (principal * monthlyRate * (1 + monthlyRate) ** loan.tenureMonths) /
-            ((1 + monthlyRate) ** loan.tenureMonths - 1),
-        );
+  const monthlyPayment = annuityPayment(
+    principal,
+    loan.interestRate.toNumber(),
+    loan.tenureMonths,
+  );
   const startDate = new Date();
   const dueDate = new Date(startDate);
   dueDate.setMonth(dueDate.getMonth() + loan.tenureMonths);
