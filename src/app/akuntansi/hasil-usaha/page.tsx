@@ -1,50 +1,45 @@
-import { ChevronLeft, ChevronRight, TrendingUp } from "lucide-react";
+import { Receipt, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { getServerSession } from "next-auth";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Topbar } from "@/components/layout/Topbar";
+import { ListFilters } from "@/components/shared/ListFilters";
+import { Pagination } from "@/components/shared/Pagination";
 import { authOptions } from "@/lib/auth";
+import { clampPage, dateRange, firstParam, pageWindow, parsePage } from "@/lib/listing";
 import { prisma } from "@/lib/prisma";
-const SIZE = 25;
+
 const rp = (v: number) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(v);
+  `${v < 0 ? "-" : ""}Rp${Math.abs(Math.round(v)).toLocaleString("id-ID")}`;
+const dateText = (value: Date) =>
+  new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(value);
+
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{
-    page?: string;
-    q?: string;
-    from?: string;
-    to?: string;
-  }>;
+  searchParams: Promise<{ page?: string; q?: string; from?: string; to?: string }>;
 }) {
   const s = await getServerSession(authOptions);
   if (!s) redirect("/login");
   if (s.user.role === "ANGGOTA") redirect("/dashboard");
-  const q = await searchParams;
-  const from = q.from ? new Date(`${q.from}T00:00:00`) : undefined,
-    to = q.to ? new Date(`${q.to}T23:59:59.999`) : undefined;
-  const where = {
-    recognizedAt: from || to ? { gte: from, lte: to } : undefined,
-    loan: q.q
+
+  const params = await searchParams;
+  const search = firstParam(params.q);
+  const from = firstParam(params.from);
+  const to = firstParam(params.to);
+  const range = dateRange(from, to);
+
+  const ledgerWhere = {
+    recognizedAt: range,
+    loan: search
       ? {
           OR: [
-            { loanNumber: { contains: q.q, mode: "insensitive" as const } },
+            { loanNumber: { contains: search, mode: "insensitive" as const } },
             {
               member: {
                 OR: [
-                  { name: { contains: q.q, mode: "insensitive" as const } },
-                  {
-                    memberNumber: {
-                      contains: q.q,
-                      mode: "insensitive" as const,
-                    },
-                  },
+                  { name: { contains: search, mode: "insensitive" as const } },
+                  { memberNumber: { contains: search, mode: "insensitive" as const } },
                 ],
               },
             },
@@ -52,144 +47,237 @@ export default async function Page({
         }
       : undefined,
   };
-  const requested = Math.max(1, parseInt(q.page ?? "1") || 1);
-  const [count, total] = await Promise.all([
-    prisma.businessIncome.count({ where }),
-    prisma.businessIncome.aggregate({ where, _sum: { amount: true } }),
+
+  const [count, income, expense, activeLoans] = await Promise.all([
+    prisma.businessIncome.count({ where: ledgerWhere }),
+    prisma.businessIncome.aggregate({
+      where: { recognizedAt: range },
+      _sum: { amount: true },
+    }),
+    prisma.operationalExpense.aggregate({
+      where: { transactionDate: range },
+      _sum: { amount: true },
+    }),
+    prisma.loan.findMany({
+      where: { status: "ACTIVE", monthlyPayment: { not: null } },
+      select: {
+        principalAmount: true,
+        monthlyPayment: true,
+        tenureMonths: true,
+        payments: { select: { interestComponent: true } },
+      },
+    }),
   ]);
-  const pages = Math.max(1, Math.ceil(count / SIZE));
-  const page = Math.min(requested, pages);
+
+  const page = clampPage(parsePage(params.page), count);
   const rows = await prisma.businessIncome.findMany({
-    where,
+    where: ledgerWhere,
     select: {
       id: true,
       recognizedAt: true,
       amount: true,
-      loanPayment: { select: { amount: true, receiptNumber: true } },
+      loanPayment: {
+        select: {
+          amount: true,
+          receiptNumber: true,
+          installmentNumber: true,
+          principalComponent: true,
+        },
+      },
       loan: {
         select: {
           loanNumber: true,
-          principalAmount: true,
           member: { select: { name: true, memberNumber: true } },
         },
       },
     },
-    orderBy: { recognizedAt: "desc" },
-    skip: (page - 1) * SIZE,
-    take: SIZE,
+    orderBy: [{ recognizedAt: "desc" }, { id: "asc" }],
+    ...pageWindow(page),
   });
+
+  const interestIncome = income._sum.amount?.toNumber() ?? 0;
+  const operationalExpense = expense._sum.amount?.toNumber() ?? 0;
+  const net = interestIncome - operationalExpense;
+
+  // Bunga pada pinjaman berjalan: seluruh bunga dibayar lebih dulu dari cicilan awal.
+  let contractInterest = 0;
+  let paidInterest = 0;
+  for (const loan of activeLoans) {
+    const monthly = loan.monthlyPayment?.toNumber() ?? 0;
+    contractInterest += Math.max(0, monthly * loan.tenureMonths - loan.principalAmount.toNumber());
+    paidInterest += loan.payments.reduce((sum, p) => sum + p.interestComponent.toNumber(), 0);
+  }
+  const remainingInterest = Math.max(0, contractInterest - paidInterest);
+  const paidShare = contractInterest > 0 ? Math.min(100, (paidInterest / contractInterest) * 100) : 0;
+  const filtered = Boolean(from || to);
+
   return (
     <>
       <AppSidebar />
       <Topbar
         user={s.user}
         title="Hasil Usaha"
-        subtitle="Bunga jasa yang terealisasi dari pembayaran angsuran"
+        subtitle="Pendapatan bunga pinjaman dikurangi belanja operasional"
       />
       <main className="min-h-screen bg-slate-50 px-4 pb-12 pt-24 sm:px-6 lg:ml-[280px] lg:px-10 lg:pt-28">
-        <section className="rounded-card bg-gradient-to-br from-emerald-600 to-emerald-800 p-7 text-white">
-          <div className="flex items-center justify-between">
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <Card
+            icon={TrendingUp}
+            tone="emerald"
+            label={`Pendapatan bunga${filtered ? " (periode)" : ""}`}
+            value={rp(interestIncome)}
+          />
+          <Card
+            icon={TrendingDown}
+            tone="amber"
+            label={`Belanja operasional${filtered ? " (periode)" : ""}`}
+            value={rp(operationalExpense)}
+          />
+          <Card
+            icon={Wallet}
+            tone={net >= 0 ? "blue" : "red"}
+            label={`Hasil usaha bersih${filtered ? " (periode)" : ""}`}
+            value={rp(net)}
+          />
+        </section>
+
+        <section className="mt-6 rounded-card border border-slate-200/70 bg-white p-5 shadow-sm sm:p-7">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-sm text-emerald-100">
-                Total Hasil Usaha dari Bunga
-              </p>
-              <p className="mt-2 text-3xl font-bold">
-                {rp(total._sum.amount?.toNumber() ?? 0)}
-              </p>
-              <p className="mt-2 text-sm text-emerald-100">
-                {count} pembayaran berbunga tercatat
+              <h3 className="text-base font-semibold text-slate-900 sm:text-lg">
+                Bunga pinjaman berjalan
+              </h3>
+              <p className="text-sm text-slate-500">
+                Seluruh bunga dibayar lebih dulu dari cicilan awal, lalu sisa cicilan mengurangi pokok.
               </p>
             </div>
-            <TrendingUp size={40} />
+            <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+              <Receipt size={14} /> {activeLoans.length} pinjaman berjalan
+            </span>
+          </div>
+          <dl className="mt-5 grid gap-4 sm:grid-cols-3">
+            <Metric label="Total bunga kontrak" value={rp(contractInterest)} />
+            <Metric label="Sudah dibayar" value={rp(paidInterest)} />
+            <Metric label="Belum dibayar" value={rp(remainingInterest)} />
+          </dl>
+          <div className="mt-5">
+            <div className="flex justify-between text-xs text-slate-500">
+              <span>Bunga terbayar</span>
+              <span className="tabular-nums">{Math.round(paidShare)}%</span>
+            </div>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+              <div className="h-full rounded-full bg-emerald-500" style={{ width: `${paidShare}%` }} />
+            </div>
           </div>
         </section>
-        <section className="mt-6 rounded-card bg-white p-7 shadow-sm">
-          <h3 className="text-lg font-bold">Riwayat Hasil Usaha</h3>
+
+        <section className="mt-6 rounded-card border border-slate-200/70 bg-white p-5 shadow-sm sm:p-7">
+          <h3 className="text-base font-semibold text-slate-900 sm:text-lg">Riwayat Pendapatan Bunga</h3>
           <p className="text-sm text-slate-500">
-            Diakui saat pembayaran angsuran diterima · 25 data per halaman
+            Diakui saat angsuran diterima · {count.toLocaleString("id-ID")} catatan
           </p>
-          <form className="mt-5 grid grid-cols-5 gap-3">
-            <input
-              name="q"
-              defaultValue={q.q}
-              placeholder="Cari anggota / nomor pinjaman"
-              className="col-span-2 h-11 rounded-xl border px-3 text-sm"
-            />
-            <input
-              name="from"
-              type="date"
-              defaultValue={q.from}
-              className="h-11 rounded-xl border px-3 text-sm"
-            />
-            <input
-              name="to"
-              type="date"
-              defaultValue={q.to}
-              className="h-11 rounded-xl border px-3 text-sm"
-            />
-            <button className="h-11 rounded-xl bg-slate-900 font-bold text-white">
-              Terapkan
-            </button>
-          </form>
-          <table className="mt-5 w-full text-left text-sm">
-            <thead>
-              <tr className="border-b text-xs uppercase text-slate-400">
-                <th className="py-3">Tanggal</th>
-                <th>Anggota</th>
-                <th>Pinjaman</th>
-                <th>Pembayaran</th>
-                <th className="text-right">Pendapatan Bunga</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="border-b">
-                  <td className="py-4">
-                    {new Intl.DateTimeFormat("id-ID").format(r.recognizedAt)}
-                  </td>
-                  <td>
-                    <b>{r.loan.member.name}</b>
-                    <p className="text-xs text-slate-400">
-                      {r.loan.member.memberNumber}
-                    </p>
-                  </td>
-                  <td>{r.loan.loanNumber}</td>
-                  <td>
-                    {rp(r.loanPayment?.amount.toNumber() ?? 0)}
-                    <p className="text-xs text-slate-400">
-                      {r.loanPayment?.receiptNumber}
-                    </p>
-                  </td>
-                  <td className="text-right font-bold text-emerald-700">
-                    {rp(r.amount.toNumber())}
-                  </td>
+          <ListFilters
+            basePath="/akuntansi/hasil-usaha"
+            q={search}
+            placeholder="Cari anggota, nomor anggota, atau nomor pinjaman..."
+            dates={{ from, to }}
+          />
+          <div className="mt-5 overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left text-sm">
+              <thead>
+                <tr className="border-b text-xs uppercase text-slate-400">
+                  <th className="py-3">Tanggal</th>
+                  <th>Anggota</th>
+                  <th>Pinjaman</th>
+                  <th>Angsuran</th>
+                  <th className="text-right">Pokok</th>
+                  <th className="text-right">Pendapatan Bunga</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="mt-5 flex justify-between border-t pt-5">
-            <p className="text-sm text-slate-500">
-              Halaman {page} dari {pages}
-            </p>
-            <div className="flex gap-2">
-              <Link
-                href={`/akuntansi/hasil-usaha?page=${Math.max(1, page - 1)}`}
-                className={page <= 1 ? "pointer-events-none opacity-40" : ""}
-              >
-                <ChevronLeft />
-              </Link>
-              <Link
-                href={`/akuntansi/hasil-usaha?page=${Math.min(pages, page + 1)}`}
-                className={
-                  page >= pages ? "pointer-events-none opacity-40" : ""
-                }
-              >
-                <ChevronRight />
-              </Link>
-            </div>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id} className="border-b border-slate-50">
+                    <td className="py-4">{dateText(r.recognizedAt)}</td>
+                    <td>
+                      <b>{r.loan.member.name}</b>
+                      <p className="text-xs text-slate-400">{r.loan.member.memberNumber}</p>
+                    </td>
+                    <td>{r.loan.loanNumber}</td>
+                    <td>
+                      {r.loanPayment ? `ke-${r.loanPayment.installmentNumber}` : "-"}
+                      <p className="text-xs text-slate-400">
+                        {rp(r.loanPayment?.amount.toNumber() ?? 0)}
+                      </p>
+                    </td>
+                    <td className="text-right tabular-nums text-slate-600">
+                      {rp(r.loanPayment?.principalComponent.toNumber() ?? 0)}
+                    </td>
+                    <td className="text-right font-bold tabular-nums text-emerald-700">
+                      {rp(r.amount.toNumber())}
+                    </td>
+                  </tr>
+                ))}
+                {!rows.length && (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-slate-400">
+                      Tidak ada pendapatan bunga yang sesuai.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
+          <Pagination
+            basePath="/akuntansi/hasil-usaha"
+            query={{ q: search, from, to }}
+            page={page}
+            total={count}
+          />
         </section>
       </main>
     </>
+  );
+}
+
+function Card({
+  icon: Icon,
+  tone,
+  label,
+  value,
+}: {
+  icon: typeof TrendingUp;
+  tone: "emerald" | "amber" | "blue" | "red";
+  label: string;
+  value: string;
+}) {
+  const colors = {
+    emerald: "bg-emerald-50 text-emerald-600",
+    amber: "bg-amber-50 text-amber-600",
+    blue: "bg-blue-50 text-blue-600",
+    red: "bg-red-50 text-red-600",
+  };
+  return (
+    <div className="rounded-card border border-slate-200/70 bg-white p-5 shadow-sm sm:p-6">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-slate-500">{label}</p>
+          <p className="mt-1.5 truncate text-2xl font-semibold tracking-tight text-slate-900 tabular-nums">
+            {value}
+          </p>
+        </div>
+        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${colors[tone]}`}>
+          <Icon size={23} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl bg-slate-50 p-4">
+      <dt className="text-xs font-medium uppercase tracking-wider text-slate-400">{label}</dt>
+      <dd className="mt-1 text-lg font-semibold tabular-nums text-slate-900">{value}</dd>
+    </div>
   );
 }
