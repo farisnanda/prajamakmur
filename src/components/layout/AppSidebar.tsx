@@ -1,227 +1,293 @@
 "use client";
 
 import {
+  BookOpen,
+  ChevronDown,
+  FileCheck2,
+  Landmark,
   LayoutDashboard,
+  Settings,
   Users,
   Wallet,
-  Landmark,
-  BookOpen,
-  FileBarChart,
-  Settings,
-  FileCheck2,
-  ChevronDown,
+  X,
+  type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { NAV_TOGGLE_EVENT } from "./navEvents";
 
-const menus = [
-  { title: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
-  { title: "Anggota", icon: Users, href: "/anggota" },
-  { title: "Simpanan", icon: Wallet, href: "/simpanan" },
+type NavLink = { title: string; href: string; icon?: LucideIcon };
+type NavGroup = { title: string; icon: LucideIcon; children: NavLink[] };
+type NavItem = NavLink | NavGroup;
+type NavSection = { label: string; items: NavItem[] };
+
+const adminNav: NavSection[] = [
   {
-    title: "Verifikasi Penarikan",
-    icon: FileCheck2,
-    href: "/simpanan/sukarela/penarikan",
+    label: "Utama",
+    items: [{ title: "Dashboard", icon: LayoutDashboard, href: "/dashboard" }],
   },
-  { title: "Pinjaman", icon: Landmark, href: "/pinjaman" },
-  { title: "Akuntansi", icon: BookOpen, href: "/akuntansi" },
-  { title: "Hasil Usaha", icon: FileBarChart, href: "/akuntansi/hasil-usaha" },
-  { title: "Laporan", icon: FileBarChart, href: "/laporan" },
-  { title: "Pengaturan", icon: Settings, href: "/pengaturan" },
-];
-const memberMenus = [
-  { title: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
   {
-    title: "Pengajuan Pinjaman",
-    icon: FileCheck2,
-    href: "/pengajuan-pinjaman",
+    label: "Keanggotaan",
+    items: [{ title: "Anggota", icon: Users, href: "/anggota" }],
   },
-  { title: "Penarikan Sukarela", icon: Wallet, href: "/penarikan-sukarela" },
+  {
+    label: "Transaksi",
+    items: [
+      {
+        title: "Simpanan",
+        icon: Wallet,
+        children: [
+          { title: "Semua Simpanan", href: "/simpanan" },
+          { title: "Simpanan Pokok", href: "/simpanan/pokok" },
+          { title: "Simpanan Wajib", href: "/simpanan/wajib" },
+          { title: "Simpanan Sukarela", href: "/simpanan/sukarela" },
+          {
+            title: "Verifikasi Penarikan",
+            href: "/simpanan/sukarela/penarikan",
+          },
+        ],
+      },
+      {
+        title: "Pinjaman",
+        icon: Landmark,
+        children: [
+          { title: "Daftar Pengajuan", href: "/pinjaman" },
+          { title: "Pembayaran Pinjaman", href: "/pinjaman/pembayaran" },
+        ],
+      },
+    ],
+  },
+  {
+    label: "Keuangan",
+    items: [
+      {
+        title: "Akuntansi",
+        icon: BookOpen,
+        children: [
+          { title: "Arus Kas", href: "/akuntansi/arus-kas" },
+          { title: "Belanja Operasional", href: "/akuntansi/belanja-operasional" },
+          { title: "Hasil Usaha", href: "/akuntansi/hasil-usaha" },
+        ],
+      },
+    ],
+  },
+  {
+    label: "Sistem",
+    items: [
+      {
+        title: "Pengaturan",
+        icon: Settings,
+        children: [
+          { title: "Landing Page", href: "/pengaturan" },
+          { title: "Nominal Simpanan", href: "/pengaturan/simpanan" },
+          { title: "Akun Pengguna", href: "/pengaturan/akun" },
+          { title: "Berita & Kegiatan", href: "/pengaturan/berita" },
+        ],
+      },
+    ],
+  },
 ];
+
+const memberNav: NavSection[] = [
+  {
+    label: "Menu",
+    items: [
+      { title: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
+      { title: "Pengajuan Pinjaman", icon: FileCheck2, href: "/pengajuan-pinjaman" },
+      { title: "Penarikan Sukarela", icon: Wallet, href: "/penarikan-sukarela" },
+    ],
+  },
+];
+
+const isGroup = (item: NavItem): item is NavGroup => "children" in item;
 
 export function AppSidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const visibleMenus = session?.user.role === "ANGGOTA" ? memberMenus : menus;
-  const [loansOpen, setLoansOpen] = useState(pathname.startsWith("/pinjaman"));
-  const [savingsOpen, setSavingsOpen] = useState(
-    pathname.startsWith("/simpanan"),
-  );
-  const [accountingOpen, setAccountingOpen] = useState(
-    pathname.startsWith("/akuntansi"),
-  );
+  const sections = session?.user.role === "ANGGOTA" ? memberNav : adminNav;
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Mobile drawer: opened from the topbar menu button.
+  useEffect(() => {
+    const toggle = () => setMobileOpen((open) => !open);
+    window.addEventListener(NAV_TOGGLE_EVENT, toggle);
+    return () => window.removeEventListener(NAV_TOGGLE_EVENT, toggle);
+  }, []);
+
+  // Close the drawer after navigating (adjust state during render, not in an effect).
+  const [navPath, setNavPath] = useState(pathname);
+  if (navPath !== pathname) {
+    setNavPath(pathname);
+    setMobileOpen(false);
+  }
+
+  useEffect(() => {
+    document.body.dataset.navOpen = mobileOpen ? "true" : "false";
+    if (!mobileOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileOpen]);
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-[280px] border-r border-slate-200 bg-white">
-      <div className="flex h-24 items-center gap-3 px-7">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-white">
-          PM
+    <>
+      <div
+        aria-hidden="true"
+        onClick={() => setMobileOpen(false)}
+        className={`fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-[2px] transition-opacity duration-300 lg:hidden ${
+          mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      />
+
+      <aside
+        id="app-sidebar"
+        aria-label="Navigasi utama"
+        className={`fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col border-r border-slate-200/80 bg-white transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] lg:translate-x-0 ${
+          mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex h-16 shrink-0 items-center gap-3 px-6 lg:h-20">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-[13px] font-bold tracking-tight text-white shadow-sm shadow-blue-600/30">
+            PM
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[15px] font-semibold leading-tight text-slate-900">
+              Praja Makmur
+            </p>
+            <p className="text-xs text-slate-500">Koperasi Digital</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setMobileOpen(false)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 lg:hidden"
+            aria-label="Tutup menu"
+          >
+            <X size={18} />
+          </button>
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Praja Makmur</h1>
-          <p className="text-sm text-slate-500">Koperasi Digital</p>
+
+        <nav className="flex-1 overflow-y-auto px-3 pb-6">
+          {sections.map((section) => (
+            <div key={section.label} className="mt-4 first:mt-1">
+              <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                {section.label}
+              </p>
+              <div className="space-y-0.5">
+                {section.items.map((item) =>
+                  isGroup(item) ? (
+                    <SidebarGroup key={item.title} group={item} pathname={pathname} />
+                  ) : (
+                    <SidebarLink key={item.href} link={item} pathname={pathname} />
+                  ),
+                )}
+              </div>
+            </div>
+          ))}
+        </nav>
+
+        <div className="shrink-0 border-t border-slate-100 px-6 py-4">
+          <p className="text-[11px] leading-relaxed text-slate-400">
+            Koperasi Pegawai Praja Makmur
+          </p>
+        </div>
+      </aside>
+    </>
+  );
+}
+
+function SidebarLink({ link, pathname }: { link: NavLink; pathname: string }) {
+  const Icon = link.icon;
+  const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
+
+  return (
+    <Link
+      href={link.href}
+      aria-current={active ? "page" : undefined}
+      className={`group flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors ${
+        active
+          ? "bg-blue-50 text-blue-700"
+          : "text-slate-600 hover:bg-slate-100/70 hover:text-slate-900"
+      }`}
+    >
+      {Icon && (
+        <Icon
+          size={18}
+          className={active ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"}
+        />
+      )}
+      {link.title}
+    </Link>
+  );
+}
+
+function SidebarGroup({ group, pathname }: { group: NavGroup; pathname: string }) {
+  const Icon = group.icon;
+  const active = group.children.some(
+    (child) => pathname === child.href || pathname.startsWith(`${child.href}/`),
+  );
+  const [open, setOpen] = useState(active);
+  // Auto-expand when navigation lands inside this group.
+  const [wasActive, setWasActive] = useState(active);
+  if (wasActive !== active) {
+    setWasActive(active);
+    if (active) setOpen(true);
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        className={`group flex h-10 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors ${
+          active
+            ? "text-slate-900"
+            : "text-slate-600 hover:bg-slate-100/70 hover:text-slate-900"
+        }`}
+      >
+        <Icon
+          size={18}
+          className={active ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"}
+        />
+        <span className="flex-1 text-left">{group.title}</span>
+        <ChevronDown
+          size={16}
+          className={`text-slate-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div className="my-1 ml-[21px] space-y-0.5 border-l border-slate-200 pl-3">
+            {group.children.map((child) => {
+              const childActive = pathname === child.href;
+              return (
+                <Link
+                  key={child.href}
+                  href={child.href}
+                  tabIndex={open ? undefined : -1}
+                  aria-current={childActive ? "page" : undefined}
+                  className={`relative flex h-9 items-center rounded-lg px-3 text-[13px] transition-colors ${
+                    childActive
+                      ? "bg-blue-50 font-semibold text-blue-700 before:absolute before:-left-[13px] before:h-5 before:w-0.5 before:rounded-full before:bg-blue-600"
+                      : "font-medium text-slate-500 hover:bg-slate-100/70 hover:text-slate-900"
+                  }`}
+                >
+                  {child.title}
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </div>
-
-      <nav className="px-5">
-        <p className="mb-4 px-3 text-xs font-bold uppercase tracking-wider text-slate-400">
-          Menu Utama
-        </p>
-
-        <div className="space-y-2">
-          {visibleMenus.map((menu) => {
-            const Icon = menu.icon;
-            const active =
-              pathname === menu.href || pathname.startsWith(`${menu.href}/`);
-
-            if (
-              session?.user.role !== "ANGGOTA" &&
-              menu.href === "/akuntansi"
-            ) {
-              return (
-                <div key={menu.title}>
-                  <button
-                    type="button"
-                    onClick={() => setAccountingOpen((open) => !open)}
-                    aria-expanded={accountingOpen}
-                    className={`flex h-12 w-full items-center gap-3 rounded-2xl px-4 text-sm font-semibold ${active ? "bg-blue-50 text-blue-700" : "text-slate-600"}`}
-                  >
-                    <Icon size={20} />
-                    <span className="flex-1 text-left">Akuntansi</span>
-                    <ChevronDown
-                      size={17}
-                      className={accountingOpen ? "rotate-180" : ""}
-                    />
-                  </button>
-                  <div
-                    className={`grid overflow-hidden ${accountingOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
-                  >
-                    <div className="min-h-0 space-y-1 pl-7">
-                      <Link
-                        href="/akuntansi/arus-kas"
-                        className={`block rounded-xl px-4 py-2 text-sm font-semibold ${pathname === "/akuntansi/arus-kas" ? "bg-blue-50 text-blue-700" : "text-slate-500"}`}
-                      >
-                        Arus Kas
-                      </Link>
-                      <Link
-                        href="/akuntansi/belanja-operasional"
-                        className={`block rounded-xl px-4 py-2 text-sm font-semibold ${pathname === "/akuntansi/belanja-operasional" ? "bg-blue-50 text-blue-700" : "text-slate-500"}`}
-                      >
-                        Belanja Operasional
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              );
-            }
-
-            if (session?.user.role !== "ANGGOTA" && menu.href === "/simpanan") {
-              return (
-                <div key={menu.title}>
-                  <button
-                    type="button"
-                    onClick={() => setSavingsOpen((open) => !open)}
-                    aria-expanded={savingsOpen}
-                    className={`flex h-12 w-full items-center gap-3 rounded-2xl px-4 text-sm font-semibold transition ${active ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50"}`}
-                  >
-                    <Icon size={20} />
-                    <span className="flex-1 text-left">Simpanan</span>
-                    <ChevronDown
-                      size={17}
-                      className={`transition-transform ${savingsOpen ? "rotate-180" : ""}`}
-                    />
-                  </button>
-                  <div
-                    className={`grid overflow-hidden transition-all ${savingsOpen ? "mt-1 grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
-                  >
-                    <div className="min-h-0 space-y-1 pl-7">
-                      <Link
-                        href="/simpanan"
-                        className={`block rounded-xl px-4 py-2 text-sm font-semibold ${pathname === "/simpanan" ? "bg-blue-50 text-blue-700" : "text-slate-500"}`}
-                      >
-                        Semua Simpanan
-                      </Link>
-                      <Link
-                        href="/simpanan/pokok"
-                        className={`block rounded-xl px-4 py-2 text-sm font-semibold ${pathname === "/simpanan/pokok" ? "bg-blue-50 text-blue-700" : "text-slate-500"}`}
-                      >
-                        Simpanan Pokok
-                      </Link>
-                      <Link
-                        href="/simpanan/wajib"
-                        className={`block rounded-xl px-4 py-2 text-sm font-semibold ${pathname === "/simpanan/wajib" ? "bg-blue-50 text-blue-700" : "text-slate-500"}`}
-                      >
-                        Simpanan Wajib
-                      </Link>
-                      <Link
-                        href="/simpanan/sukarela"
-                        className={`block rounded-xl px-4 py-2 text-sm font-semibold ${pathname === "/simpanan/sukarela" ? "bg-blue-50 text-blue-700" : "text-slate-500"}`}
-                      >
-                        Simpanan Sukarela
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              );
-            }
-
-            if (session?.user.role !== "ANGGOTA" && menu.href === "/pinjaman") {
-              return (
-                <div key={menu.title}>
-                  <button
-                    type="button"
-                    onClick={() => setLoansOpen((open) => !open)}
-                    aria-expanded={loansOpen}
-                    className={`flex h-12 w-full items-center gap-3 rounded-2xl px-4 text-sm font-semibold transition ${active ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50"}`}
-                  >
-                    <Icon size={20} />
-                    <span className="flex-1 text-left">Pinjaman</span>
-                    <ChevronDown
-                      size={17}
-                      className={`transition-transform ${loansOpen ? "rotate-180" : ""}`}
-                    />
-                  </button>
-                  <div
-                    className={`grid overflow-hidden transition-all duration-200 ${loansOpen ? "mt-1 grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
-                  >
-                    <div className="min-h-0 space-y-1 pl-7">
-                      <Link
-                        href="/pinjaman"
-                        className={`block rounded-xl px-4 py-2.5 text-sm font-semibold ${pathname === "/pinjaman" ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-50"}`}
-                      >
-                        Daftar Pengajuan
-                      </Link>
-                      <Link
-                        href="/pinjaman/pembayaran"
-                        className={`block rounded-xl px-4 py-2.5 text-sm font-semibold ${pathname === "/pinjaman/pembayaran" ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-50"}`}
-                      >
-                        Pembayaran Pinjaman
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              );
-            }
-
-            return (
-              <Link
-                key={menu.title}
-                href={menu.href}
-                className={`flex h-12 w-full items-center gap-3 rounded-2xl px-4 text-sm font-semibold transition ${
-                  active
-                    ? "bg-blue-50 text-blue-700"
-                    : "text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                <Icon size={20} />
-                {menu.title}
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
-    </aside>
+    </div>
   );
 }

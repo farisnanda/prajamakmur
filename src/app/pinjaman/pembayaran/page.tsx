@@ -192,7 +192,7 @@ export default async function LoanPaymentsPage({
         title="Pembayaran Pinjaman"
         subtitle="Daftar kewajiban dan pencatatan angsuran peminjam"
       />
-      <main className="ml-[280px] min-h-screen bg-slate-50 px-8 pb-10 pt-32">
+      <main className="min-h-screen bg-slate-50 px-4 pb-12 pt-24 sm:px-6 lg:ml-[280px] lg:px-10 lg:pt-28">
         {query.success && (
           <Notice tone="success">
             {query.success === "bulk"
@@ -207,7 +207,7 @@ export default async function LoanPaymentsPage({
               : "Data pembayaran tidak valid."}
           </Notice>
         )}
-        <section className="grid grid-cols-3 gap-5">
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <Stat
             label="Total Peminjam Aktif"
             value={`${totalBorrowers} anggota`}
@@ -224,10 +224,10 @@ export default async function LoanPaymentsPage({
             icon={CheckCircle2}
           />
         </section>
-        <section className="mt-6 rounded-[28px] border border-slate-100 bg-white p-7 shadow-sm">
+        <section className="mt-6 rounded-card border border-slate-200/70 bg-white p-5 shadow-sm sm:p-7">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-bold text-slate-900">
+              <h3 className="text-base font-semibold text-slate-900 sm:text-lg">
                 Daftar Anggota yang Memiliki Kewajiban
               </h3>
               <p className="text-sm text-slate-500">
@@ -262,7 +262,7 @@ export default async function LoanPaymentsPage({
             </div>
           </div>
         </section>
-        <section className="mt-6 rounded-[28px] border border-slate-100 bg-white p-7 shadow-sm">
+        <section className="mt-6 rounded-card border border-slate-200/70 bg-white p-5 shadow-sm sm:p-7">
           <div className="flex items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-bold">Riwayat Pembayaran Pinjaman</h3>
@@ -403,11 +403,11 @@ function Stat({
   icon: typeof ReceiptText;
 }) {
   return (
-    <div className="rounded-[24px] border border-slate-100 bg-white p-6 shadow-sm">
+    <div className="rounded-card border border-slate-200/70 bg-white p-5 shadow-sm sm:p-6">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-slate-500">{label}</p>
-          <p className="mt-2 text-2xl font-bold text-slate-900">{value}</p>
+          <p className="mt-1.5 text-2xl font-semibold tracking-tight text-slate-900 tabular-nums">{value}</p>
         </div>
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
           <Icon size={23} />

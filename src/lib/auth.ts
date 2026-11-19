@@ -5,7 +5,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 
 const credentialsSchema = z.object({
-  email: z.email().trim().toLowerCase(),
+  // NIP/NI anggota, atau email (Super Admin dan akun lama).
+  identifier: z.string().trim().min(1).max(120),
   password: z.string().min(1),
 });
 
@@ -26,18 +27,23 @@ export const authOptions: NextAuthOptions = {
   pages: { signIn: "/login" },
   providers: [
     CredentialsProvider({
-      name: "Email dan kata sandi",
+      name: "NIP/NI atau email dan kata sandi",
       credentials: {
-        email: { label: "Email", type: "email" },
+        identifier: { label: "NIP/NI atau email", type: "text" },
         password: { label: "Kata sandi", type: "password" },
       },
       async authorize(credentials) {
         const parsed = credentialsSchema.safeParse(credentials);
         if (!parsed.success) return null;
 
-        const user = await prisma.user.findUnique({
-          where: { email: parsed.data.email },
-        });
+        const identifier = parsed.data.identifier;
+        const user = identifier.includes("@")
+          ? await prisma.user.findUnique({
+              where: { email: identifier.toLowerCase() },
+            })
+          : await prisma.user.findFirst({
+              where: { member: { employeeNumber: identifier } },
+            });
 
         if (!user?.isActive) return null;
 
@@ -52,6 +58,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           email: user.email,
           role: user.role,
+          mustChangePassword: user.mustChangePassword,
         };
       },
     }),
@@ -61,6 +68,15 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.mustChangePassword = user.mustChangePassword;
+      } else if (token.mustChangePassword) {
+        // Selama wajib ganti password, baca ulang status agar token
+        // terbebas begitu password diganti.
+        const fresh = await prisma.user.findUnique({
+          where: { id: token.id },
+          select: { mustChangePassword: true },
+        });
+        token.mustChangePassword = fresh?.mustChangePassword ?? false;
       }
       return token;
     },
@@ -68,6 +84,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id;
         session.user.role = token.role;
+        session.user.mustChangePassword = token.mustChangePassword;
       }
       return session;
     },

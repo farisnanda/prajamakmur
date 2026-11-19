@@ -70,7 +70,7 @@ export default async function MembersPage({
         subtitle="Kelola data anggota Koperasi Praja Makmur"
       />
 
-      <main className="ml-[280px] min-h-screen bg-slate-50 px-8 pb-10 pt-32">
+      <main className="min-h-screen bg-slate-50 px-4 pb-12 pt-24 sm:px-6 lg:ml-[280px] lg:px-10 lg:pt-28">
         {filters.success && (
           <div className="mb-6 rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-4 text-sm font-semibold text-emerald-700">
             Data anggota berhasil{" "}
@@ -78,7 +78,7 @@ export default async function MembersPage({
           </div>
         )}
 
-        <section className="grid grid-cols-4 gap-5">
+        <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
           <Stat label="Total Anggota" value={total} icon={Users} />
           <Stat label="Anggota Aktif" value={active} icon={UserCheck} />
           <Stat label="PNS" value={pns} icon={BriefcaseBusiness} />
@@ -89,10 +89,10 @@ export default async function MembersPage({
           />
         </section>
 
-        <section className="mt-6 rounded-[28px] border border-slate-100 bg-white p-7 shadow-sm">
+        <section className="mt-6 rounded-card border border-slate-200/70 bg-white p-5 shadow-sm sm:p-7">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h3 className="text-lg font-bold text-slate-900">
+              <h3 className="text-base font-semibold text-slate-900 sm:text-lg">
                 Daftar Anggota
               </h3>
               <p className="text-sm text-slate-500">
@@ -101,14 +101,14 @@ export default async function MembersPage({
             </div>
             <Link
               href="/anggota/tambah"
-              className="flex h-11 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-bold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700"
+              className="flex h-11 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-bold text-white shadow-sm hover:bg-blue-700"
             >
               <Plus size={18} /> Tambah Anggota
             </Link>
           </div>
 
-          <form className="mt-6 flex gap-3">
-            <div className="flex h-11 flex-1 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4">
+          <form className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <div className="flex h-11 flex-1 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 transition focus-within:border-blue-300 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-100">
               <Search size={18} className="text-slate-400" />
               <input
                 name="q"
@@ -133,7 +133,7 @@ export default async function MembersPage({
           </form>
 
           <div className="mt-6 overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="w-full min-w-[720px] text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-xs uppercase tracking-wider text-slate-400">
                   <th className="py-4">Anggota</th>
@@ -151,7 +151,12 @@ export default async function MembersPage({
                     className="border-b border-slate-50 text-slate-600"
                   >
                     <td className="py-4">
-                      <p className="font-bold text-slate-900">{member.name}</p>
+                      <Link
+                        href={`/anggota/${member.id}`}
+                        className="font-bold text-slate-900 hover:text-blue-600"
+                      >
+                        {member.name}
+                      </Link>
                       <p className="text-xs text-slate-400">
                         {member.memberNumber}
                       </p>
@@ -179,7 +184,13 @@ export default async function MembersPage({
                         {member.isActive ? "Aktif" : "Nonaktif"}
                       </span>
                     </td>
-                    <td className="text-right">
+                    <td className="whitespace-nowrap text-right">
+                      <Link
+                        href={`/anggota/${member.id}`}
+                        className="inline-flex h-9 items-center rounded-xl px-3 text-sm font-semibold text-blue-600 hover:bg-blue-50"
+                      >
+                        Detail
+                      </Link>
                       <Link
                         href={`/anggota/${member.id}/edit`}
                         className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 hover:bg-blue-50 hover:text-blue-600"
@@ -194,7 +205,7 @@ export default async function MembersPage({
                   <tr>
                     <td
                       colSpan={6}
-                      className="py-16 text-center text-slate-400"
+                      className="py-16 text-center text-sm text-slate-400"
                     >
                       Belum ada anggota yang sesuai.
                     </td>
@@ -219,13 +230,13 @@ function Stat({
   icon: typeof Users;
 }) {
   return (
-    <div className="rounded-[24px] border border-slate-100 bg-white p-5 shadow-sm">
+    <div className="rounded-card border border-slate-200/70 bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-slate-500">{label}</p>
-          <p className="mt-2 text-3xl font-bold text-slate-900">{value}</p>
+          <p className="mt-1.5 text-2xl font-semibold tracking-tight text-slate-900 tabular-nums sm:text-3xl">{value}</p>
         </div>
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+        <div className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 sm:flex">
           <Icon size={23} />
         </div>
       </div>

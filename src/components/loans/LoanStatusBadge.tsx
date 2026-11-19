@@ -34,7 +34,7 @@ export function LoanStatusBadge({
       </button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-5">
-          <div className="w-full max-w-lg rounded-[28px] bg-white shadow-2xl">
+          <div className="w-full max-w-lg rounded-card bg-white shadow-2xl">
             <div className="flex items-start justify-between border-b border-slate-100 p-6">
               <div>
                 <h3 className="text-xl font-bold text-red-900">

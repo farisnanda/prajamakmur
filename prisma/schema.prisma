@@ -258,6 +258,7 @@ model User {
   password  String
   role      Role     @default(ANGGOTA)
   isActive  Boolean  @default(true)
+  mustChangePassword Boolean @default(false)
   memberId String?   @unique
   member   Member?   @relation(fields: [memberId], references: [id], onDelete: SetNull)
 

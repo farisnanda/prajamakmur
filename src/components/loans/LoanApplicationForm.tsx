@@ -140,7 +140,7 @@ export function LoanApplicationForm({
       </Field>
       <button
         disabled={pending || !members.length}
-        className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white shadow-lg shadow-blue-600/20 disabled:opacity-50"
+        className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white shadow-sm disabled:opacity-50"
       >
         {pending ? (
           <LoaderCircle size={18} className="animate-spin" />

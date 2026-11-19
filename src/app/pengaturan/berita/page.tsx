@@ -5,6 +5,7 @@ import { ImagePlus, Newspaper, Trash2 } from "lucide-react";
 import { createNews, deleteNews } from "./actions";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Topbar } from "@/components/layout/Topbar";
+import { SettingsTabs } from "@/components/settings/SettingsTabs";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { mediaUrl } from "@/lib/landing";
@@ -29,7 +30,7 @@ export default async function Page({
         title="Berita & Kegiatan"
         subtitle="Kelola publikasi kegiatan Koperasi Praja Makmur"
       />
-      <main className="ml-[280px] min-h-screen bg-slate-50 px-8 pb-10 pt-32">
+      <main className="min-h-screen bg-slate-50 px-4 pb-12 pt-24 sm:px-6 lg:ml-[280px] lg:px-10 lg:pt-28">
         {q.success && (
           <div className="mb-5 rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-700">
             Berita berhasil diperbarui.
@@ -40,25 +41,9 @@ export default async function Page({
             Data belum valid. Foto maksimal 5 MB dan seluruh kolom wajib diisi.
           </div>
         )}
-        <div className="mb-6 flex gap-3">
-          <Link
-            href="/pengaturan"
-            className="rounded-xl border bg-white px-4 py-2 text-sm font-bold text-slate-600"
-          >
-            Konten Landing
-          </Link>
-          <span className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white">
-            Berita & Kegiatan
-          </span>
-          <Link
-            href="/pengaturan/akun"
-            className="rounded-xl border bg-white px-4 py-2 text-sm font-bold text-slate-600"
-          >
-            Pengaturan Akun
-          </Link>
-        </div>
-        <section className="grid grid-cols-12 gap-6">
-          <div className="col-span-5 rounded-[28px] bg-white p-7 shadow-sm">
+        <SettingsTabs active="berita" />
+        <section className="grid gap-6 xl:grid-cols-12">
+          <div className="rounded-card border border-slate-200/70 bg-white p-5 shadow-sm sm:p-7 xl:col-span-5">
             <div className="flex items-center gap-3">
               <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
                 <ImagePlus />
@@ -120,7 +105,7 @@ export default async function Page({
               </button>
             </form>
           </div>
-          <div className="col-span-7 rounded-[28px] bg-white p-7 shadow-sm">
+          <div className="rounded-card border border-slate-200/70 bg-white p-5 shadow-sm sm:p-7 xl:col-span-7">
             <h3 className="font-bold">Berita Terbit</h3>
             <p className="text-sm text-slate-500">
               {posts.length} berita dan kegiatan

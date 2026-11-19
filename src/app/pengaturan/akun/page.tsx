@@ -1,14 +1,15 @@
-import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { KeyRound, UserPlus, Users } from "lucide-react";
 import {
   createMemberAccount,
   resetAccountPassword,
+  resetPasswordToNip,
   updateAccount,
 } from "./actions";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Topbar } from "@/components/layout/Topbar";
+import { SettingsTabs } from "@/components/settings/SettingsTabs";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 const roleLabels = {
@@ -25,28 +26,41 @@ const input =
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ success?: string; error?: string }>;
+  searchParams: Promise<{ success?: string; error?: string; q?: string }>;
 }) {
   const s = await getServerSession(authOptions);
   if (!s) redirect("/login");
   if (!["SUPER_ADMIN", "ADMIN_KOPERASI"].includes(s.user.role))
     redirect("/dashboard");
   const q = await searchParams,
+    query = q.q?.trim() ?? "",
+    isSuper = s.user.role === "SUPER_ADMIN",
     [users, members] = await Promise.all([
       prisma.user.findMany({
+        where: query
+          ? {
+              OR: [
+                { name: { contains: query, mode: "insensitive" } },
+                { email: { contains: query, mode: "insensitive" } },
+                { member: { employeeNumber: { contains: query } } },
+                { member: { memberNumber: { contains: query, mode: "insensitive" } } },
+              ],
+            }
+          : undefined,
         select: {
           id: true,
           name: true,
           email: true,
           role: true,
           isActive: true,
-          member: { select: { memberNumber: true } },
+          mustChangePassword: true,
+          member: { select: { memberNumber: true, employeeNumber: true } },
         },
         orderBy: { name: "asc" },
       }),
       prisma.member.findMany({
-        where: { isActive: true, user: null },
-        select: { id: true, name: true, memberNumber: true },
+        where: { isActive: true, user: null, employeeNumber: { not: null } },
+        select: { id: true, name: true, memberNumber: true, employeeNumber: true },
         orderBy: { name: "asc" },
       }),
     ]);
@@ -56,6 +70,8 @@ export default async function Page({
     self: "Anda tidak dapat menonaktifkan atau mengubah role akun sendiri.",
     password: "Password baru minimal 8 karakter.",
     permission: "Admin Koperasi tidak dapat mengubah akun Super Admin.",
+    role: "Hanya Super Admin yang dapat mengubah role pengguna.",
+    nip: "Anggota ini belum memiliki NIP/NI, sehingga akun login belum bisa dibuat. Isi NIP/NI di data anggota.",
   }[q.error ?? ""];
   return (
     <>
@@ -65,7 +81,7 @@ export default async function Page({
         title="Pengaturan Akun"
         subtitle="Kelola akses pengguna dan akun anggota"
       />
-      <main className="ml-[280px] min-h-screen bg-slate-50 px-8 pb-10 pt-32">
+      <main className="min-h-screen bg-slate-50 px-4 pb-12 pt-24 sm:px-6 lg:ml-[280px] lg:px-10 lg:pt-28">
         {q.success && (
           <div className="mb-5 rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-700">
             Perubahan akun berhasil disimpan.
@@ -76,24 +92,8 @@ export default async function Page({
             {error}
           </div>
         )}
-        <div className="mb-6 flex gap-3">
-          <Link
-            href="/pengaturan"
-            className="rounded-xl border bg-white px-4 py-2 text-sm font-bold text-slate-600"
-          >
-            Konten Landing
-          </Link>
-          <Link
-            href="/pengaturan/berita"
-            className="rounded-xl border bg-white px-4 py-2 text-sm font-bold text-slate-600"
-          >
-            Berita & Kegiatan
-          </Link>
-          <span className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white">
-            Pengaturan Akun
-          </span>
-        </div>
-        <section className="rounded-[28px] bg-white p-7 shadow-sm">
+        <SettingsTabs active="akun" />
+        <section className="rounded-card bg-white p-7 shadow-sm">
           <div className="flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
               <UserPlus />
@@ -101,46 +101,36 @@ export default async function Page({
             <div>
               <h3 className="font-bold">Buat Akun Anggota</h3>
               <p className="text-sm text-slate-500">
-                {members.length} anggota aktif belum memiliki akun
+                {members.length} anggota aktif ber-NIP/NI belum memiliki akun
               </p>
             </div>
           </div>
           <form
             action={createMemberAccount}
-            className="mt-5 grid grid-cols-4 gap-3"
+            className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]"
           >
-            <select name="memberId" required className={`${input} col-span-2`}>
-              <option value="">Pilih anggota</option>
+            <select name="memberId" required className={input}>
+              <option value="">Pilih anggota (punya NIP/NI)</option>
               {members.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.memberNumber} · {m.name}
+                  {m.employeeNumber} · {m.name}
                 </option>
               ))}
             </select>
-            <input
-              name="email"
-              type="email"
-              required
-              placeholder="Email login"
-              className={input}
-            />
-            <input
-              name="password"
-              type="password"
-              minLength={8}
-              required
-              placeholder="Password awal (min. 8)"
-              className={input}
-            />
             <button
               disabled={!members.length}
-              className="col-start-4 h-11 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white disabled:opacity-40"
+              className="h-11 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white disabled:opacity-40"
             >
               Buat Akun Anggota
             </button>
           </form>
+          <p className="mt-3 text-xs text-slate-500">
+            Login memakai NIP/NI. Kata sandi awal sama dengan NIP/NI, dan
+            anggota wajib menggantinya saat masuk pertama kali. Anggota tanpa
+            NIP/NI tidak muncul di daftar ini.
+          </p>
         </section>
-        <section className="mt-6 rounded-[28px] bg-white p-7 shadow-sm">
+        <section className="mt-6 rounded-card bg-white p-7 shadow-sm">
           <div className="flex items-center gap-3">
             <Users className="text-blue-600" />
             <div>
@@ -150,11 +140,27 @@ export default async function Page({
               </p>
             </div>
           </div>
+          <form className="mt-5 flex gap-3">
+            <input
+              name="q"
+              defaultValue={query}
+              placeholder="Cari NIP/NI, nama, atau email..."
+              className={`${input} w-full max-w-md`}
+            />
+            <button className="h-11 rounded-xl bg-slate-900 px-5 text-sm font-bold text-white">
+              Cari
+            </button>
+          </form>
+          {!isSuper && (
+            <p className="mt-3 text-xs text-slate-500">
+              Role hanya dapat diubah oleh Super Admin.
+            </p>
+          )}
           <div className="mt-5 overflow-x-auto">
             <table className="min-w-[1100px] w-full text-left text-sm">
               <thead>
                 <tr>
-                  <th>Pengguna</th>
+                  <th>NIP/NI</th>
                   <th>Nama & Email</th>
                   <th>Role</th>
                   <th>Status</th>
@@ -166,10 +172,16 @@ export default async function Page({
                 {users.map((u) => (
                   <tr key={u.id}>
                     <td>
-                      <b>{u.member?.memberNumber ?? "Akun Pengelola"}</b>
+                      <b>{u.member?.employeeNumber ?? "Akun Pengelola"}</b>
                       <p className="text-xs text-slate-400">
-                        {u.id === s.user.id ? "Akun Anda" : ""}
+                        {u.member?.memberNumber ?? ""}
+                        {u.id === s.user.id ? " · Akun Anda" : ""}
                       </p>
+                      {u.mustChangePassword && (
+                        <p className="mt-1 text-xs font-semibold text-amber-600">
+                          Belum ganti password
+                        </p>
+                      )}
                     </td>
                     <td>
                       <form
@@ -184,20 +196,38 @@ export default async function Page({
                           required
                           className={input}
                         />
-                        <input
-                          name="email"
-                          type="email"
-                          defaultValue={u.email}
-                          required
-                          className={input}
-                        />
+                        {u.member ? (
+                          <>
+                            <input type="hidden" name="email" value={u.email} />
+                            <p className="truncate px-1 text-xs text-slate-400">
+                              Login: NIP/NI
+                            </p>
+                          </>
+                        ) : (
+                          <input
+                            name="email"
+                            type="email"
+                            defaultValue={u.email}
+                            required
+                            className={input}
+                          />
+                        )}
                       </form>
                     </td>
                     <td>
+                      {!isSuper && (
+                        <input
+                          type="hidden"
+                          form={`account-${u.id}`}
+                          name="role"
+                          value={u.role}
+                        />
+                      )}
                       <select
                         form={`account-${u.id}`}
-                        name="role"
+                        name={isSuper ? "role" : undefined}
                         defaultValue={u.role}
+                        disabled={!isSuper}
                         className={input}
                       >
                         {Object.entries(roleLabels).map(([v, l]) => (
@@ -227,6 +257,14 @@ export default async function Page({
                       </button>
                     </td>
                     <td>
+                      {u.member?.employeeNumber && (
+                        <form action={resetPasswordToNip} className="mb-2">
+                          <input type="hidden" name="userId" value={u.id} />
+                          <button className="h-9 rounded-lg border border-amber-200 px-3 text-xs font-semibold text-amber-700 hover:bg-amber-50">
+                            Reset ke NIP/NI
+                          </button>
+                        </form>
+                      )}
                       <form
                         action={resetAccountPassword}
                         className="flex gap-2"

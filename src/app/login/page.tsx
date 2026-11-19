@@ -1,4 +1,4 @@
-import { Building2, CheckCircle2, ShieldCheck, Sparkles } from "lucide-react";
+import { CheckCircle2, ShieldCheck } from "lucide-react";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/auth/LoginForm";
@@ -10,44 +10,49 @@ export default async function LoginPage() {
 
   return (
     <main className="relative flex min-h-screen overflow-hidden bg-slate-50">
-      <section className="relative hidden w-[52%] overflow-hidden bg-blue-700 p-14 text-white lg:flex lg:flex-col lg:justify-between">
-        <div className="absolute -left-24 top-1/3 h-96 w-96 rounded-full bg-cyan-400/20 blur-3xl" />
-        <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-indigo-400/30 blur-3xl" />
-        <div className="absolute bottom-[-15%] right-[-5%] h-[420px] w-[420px] rounded-full border-[80px] border-white/5" />
+      <section className="relative hidden w-[48%] overflow-hidden bg-gradient-to-br from-blue-800 via-blue-900 to-blue-950 p-12 text-white lg:flex lg:flex-col lg:justify-between xl:p-16">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 opacity-[0.07] [background-image:linear-gradient(to_right,white_1px,transparent_1px),linear-gradient(to_bottom,white_1px,transparent_1px)] [background-size:56px_56px] [mask-image:radial-gradient(ellipse_at_30%_40%,black,transparent_75%)]"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-blue-400/20 blur-3xl"
+        />
 
         <div className="relative z-10 flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-blue-700 shadow-xl shadow-blue-950/20">
-            <Building2 size={25} />
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-sm font-bold tracking-tight text-blue-800">
+            PM
           </div>
           <div>
-            <p className="text-xl font-bold">Praja Makmur</p>
+            <p className="text-lg font-semibold">Praja Makmur</p>
             <p className="text-sm text-blue-200">Koperasi Digital</p>
           </div>
         </div>
 
         <div className="relative z-10 max-w-xl">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold backdrop-blur">
-            <Sparkles size={16} /> Sistem Koperasi Terintegrasi
-          </div>
-          <h1 className="text-5xl font-bold leading-tight tracking-tight">
+          <p className="mb-5 text-xs font-semibold uppercase tracking-[0.14em] text-blue-200">
+            Sistem Koperasi Terintegrasi
+          </p>
+          <h1 className="text-4xl font-semibold leading-[1.1] tracking-[-0.025em] xl:text-5xl">
             Kelola koperasi lebih mudah, transparan, dan terpercaya.
           </h1>
-          <p className="mt-6 max-w-lg text-lg leading-8 text-blue-100">
+          <p className="mt-6 max-w-lg text-base leading-7 text-blue-100/90 xl:text-lg xl:leading-8">
             Satu ruang kerja untuk anggota, simpanan, pinjaman, akuntansi, dan
             laporan Praja Makmur.
           </p>
-          <div className="mt-10 grid max-w-lg grid-cols-2 gap-4 text-sm font-semibold text-blue-50">
+          <div className="mt-10 grid max-w-lg grid-cols-2 gap-x-6 gap-y-3 text-sm font-medium text-blue-50">
             <span className="flex items-center gap-2">
-              <CheckCircle2 size={18} /> Data terpusat
+              <CheckCircle2 size={17} className="text-blue-300" /> Data terpusat
             </span>
             <span className="flex items-center gap-2">
-              <CheckCircle2 size={18} /> Laporan real-time
+              <CheckCircle2 size={17} className="text-blue-300" /> Laporan real-time
             </span>
             <span className="flex items-center gap-2">
-              <CheckCircle2 size={18} /> Akses berbasis peran
+              <CheckCircle2 size={17} className="text-blue-300" /> Akses berbasis peran
             </span>
             <span className="flex items-center gap-2">
-              <CheckCircle2 size={18} /> Transaksi tercatat
+              <CheckCircle2 size={17} className="text-blue-300" /> Transaksi tercatat
             </span>
           </div>
         </div>
@@ -60,11 +65,11 @@ export default async function LoginPage() {
       <section className="flex flex-1 items-center justify-center px-6 py-12 sm:px-12">
         <div className="w-full max-w-md">
           <div className="mb-10 flex items-center gap-3 lg:hidden">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600 text-white">
-              <Building2 size={23} />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-[13px] font-bold tracking-tight text-white">
+              PM
             </div>
             <div>
-              <p className="font-bold text-slate-900">Praja Makmur</p>
+              <p className="font-semibold text-slate-900">Praja Makmur</p>
               <p className="text-xs text-slate-500">Koperasi Digital</p>
             </div>
           </div>
@@ -72,7 +77,7 @@ export default async function LoginPage() {
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
             <ShieldCheck size={24} />
           </div>
-          <h2 className="mt-6 text-3xl font-bold tracking-tight text-slate-950">
+          <h2 className="mt-6 text-2xl font-semibold tracking-[-0.02em] text-slate-950 sm:text-3xl">
             Selamat datang kembali
           </h2>
           <p className="mt-2 text-slate-500">

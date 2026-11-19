@@ -32,13 +32,23 @@ export async function updateLanding(formData: FormData) {
   const content = Object.fromEntries(
     Object.keys(landingDefaults)
       .filter((key) => !imageKeys.includes(key as (typeof imageKeys)[number]))
-      .map((key) => [key, String(formData.get(key) ?? "").trim()]),
+      .map((key) => {
+        // Fields no longer shown in the form keep their stored value.
+        const submitted = formData.get(key);
+        return [
+          key,
+          submitted === null
+            ? String((current as Record<string, unknown>)[key] ?? "")
+            : String(submitted).trim(),
+        ];
+      }),
   ) as Record<string, string>;
   const dir = path.join(process.cwd(), "public", "uploads", "landing");
   await mkdir(dir, { recursive: true });
   for (const key of imageKeys) {
     const file = formData.get(key);
     content[key] = String((current as Record<string, unknown>)[key] ?? "");
+    if (formData.get(`remove_${key}`) === "on") content[key] = "";
     if (file instanceof File && file.size > 0) {
       if (!file.type.startsWith("image/") || file.size > 5_000_000)
         redirect("/pengaturan?error=image");

@@ -27,7 +27,7 @@ export function SavingsEntryModal({
       </button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-5">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[28px] bg-white p-7">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-card bg-white p-7">
             <div className="mb-6 flex justify-between">
               <div>
                 <h3 className="text-xl font-bold">Tambah {label}</h3>

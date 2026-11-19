@@ -147,7 +147,7 @@ export function LoanPaymentsTable({
 
       {bulkOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-5">
-          <div className="w-full max-w-3xl rounded-[28px] bg-white shadow-2xl">
+          <div className="w-full max-w-3xl rounded-card bg-white shadow-2xl">
             <div className="flex items-start justify-between border-b border-slate-100 p-6">
               <div>
                 <h3 className="text-xl font-bold text-slate-900">
@@ -171,7 +171,7 @@ export function LoanPaymentsTable({
               action={createBulkLoanPayments}
               className="p-6"
             >
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid gap-4 sm:grid-cols-3">
                 <label className="text-sm font-semibold">
                   Periode
                   <input
@@ -260,7 +260,7 @@ export function LoanPaymentsTable({
       )}
       {detail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-5">
-          <div className="w-full max-w-2xl rounded-[28px] bg-white p-6 shadow-2xl">
+          <div className="w-full max-w-2xl rounded-card bg-white p-6 shadow-2xl">
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="text-xl font-bold text-slate-900">
@@ -386,7 +386,7 @@ function PayLoanModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-5">
-      <div className="w-full max-w-xl rounded-[28px] bg-white shadow-2xl">
+      <div className="w-full max-w-xl rounded-card bg-white shadow-2xl">
         <div className="flex items-start justify-between border-b border-slate-100 p-6">
           <div>
             <h3 className="text-xl font-bold text-slate-900">

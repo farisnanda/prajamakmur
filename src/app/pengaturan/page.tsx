@@ -1,41 +1,39 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { Save } from "lucide-react";
-import Link from "next/link";
 import { updateLanding } from "./actions";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Topbar } from "@/components/layout/Topbar";
+import { SettingsTabs } from "@/components/settings/SettingsTabs";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { landingData, mediaUrl } from "@/lib/landing";
 const groups = [
   {
-    title: "Hero",
+    title: "Bagian Atas (Hero)",
     fields: [
-      ["badge", "Label kecil"],
+      ["badge", "Label di atas judul"],
       ["heroTitle", "Judul utama"],
       ["heroText", "Deskripsi hero"],
-      ["primaryLabel", "Teks tombol utama"],
-      ["primaryUrl", "Link tombol utama"],
-      ["secondaryLabel", "Teks tombol kedua"],
-      ["secondaryUrl", "Link tombol kedua"],
+      ["primaryLabel", "Teks tombol masuk"],
+      ["primaryUrl", "Link tombol masuk"],
     ],
   },
   {
-    title: "Bagian Layanan",
+    title: "Keuntungan Anggota",
     fields: [
       ["featureTitle", "Judul bagian"],
       ["featureText", "Deskripsi bagian"],
-      ["feature1Title", "Fitur 1"],
-      ["feature1Text", "Deskripsi fitur 1"],
-      ["feature2Title", "Fitur 2"],
-      ["feature2Text", "Deskripsi fitur 2"],
-      ["feature3Title", "Fitur 3"],
-      ["feature3Text", "Deskripsi fitur 3"],
+      ["feature1Title", "Judul kartu Simpanan"],
+      ["feature1Text", "Deskripsi kartu Simpanan"],
+      ["feature2Title", "Judul kartu Pinjaman (utama)"],
+      ["feature2Text", "Deskripsi kartu Pinjaman"],
+      ["feature3Title", "Judul kartu Keuangan"],
+      ["feature3Text", "Deskripsi kartu Keuangan"],
     ],
   },
   {
-    title: "Statistik",
+    title: "Angka Ringkas",
     fields: [
       ["stat1Value", "Nilai statistik 1"],
       ["stat1Label", "Label statistik 1"],
@@ -46,10 +44,10 @@ const groups = [
     ],
   },
   {
-    title: "CTA Penutup",
+    title: "Ajakan Penutup",
     fields: [
-      ["ctaTitle", "Judul CTA"],
-      ["ctaText", "Deskripsi CTA"],
+      ["ctaTitle", "Judul ajakan"],
+      ["ctaText", "Deskripsi ajakan"],
     ],
   },
 ] as const;
@@ -73,7 +71,7 @@ export default async function Page({
         title="Pengaturan Landing Page"
         subtitle="Kelola konten halaman publik Praja Makmur"
       />
-      <main className="ml-[280px] min-h-screen bg-slate-50 px-8 pb-10 pt-32">
+      <main className="min-h-screen bg-slate-50 px-4 pb-12 pt-24 sm:px-6 lg:ml-[280px] lg:px-10 lg:pt-28">
         {q.success && (
           <div className="mb-5 rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-700">
             Konten landing page berhasil diperbarui.
@@ -84,42 +82,20 @@ export default async function Page({
             Foto harus berupa JPG, PNG, atau WebP dengan ukuran maksimal 5 MB.
           </div>
         )}
-        <div className="mb-6 flex gap-3">
-          <span className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white">
-            Konten Landing
-          </span>
-          <Link
-            href="/pengaturan/berita"
-            className="rounded-xl border bg-white px-4 py-2 text-sm font-bold text-slate-600"
-          >
-            Berita & Kegiatan
-          </Link>
-          <Link
-            href="/pengaturan/akun"
-            className="rounded-xl border bg-white px-4 py-2 text-sm font-bold text-slate-600"
-          >
-            Pengaturan Akun
-          </Link>
-        </div>
+        <SettingsTabs active="landing" />
         <form action={updateLanding} className="space-y-6">
-          <section className="rounded-[28px] border border-slate-100 bg-white p-7 shadow-sm">
+          <section className="rounded-card border border-slate-200/70 bg-white p-5 shadow-sm sm:p-7">
             <h3 className="text-lg font-bold">Foto Showcase</h3>
             <p className="text-sm text-slate-500">
               Kosongkan input jika ingin mempertahankan gambar saat ini.
             </p>
-            <div className="mt-5 grid grid-cols-2 gap-5">
+            <div className="mt-5 grid gap-5 sm:grid-cols-2">
               {(
                 [
-                  ["heroImage", "Kotak Ringkasan Anggota di Hero"],
-                  [
-                    "showcaseImage1",
-                    "Kotak Kondisi Keuangan — Transparan & Terukur",
-                  ],
-                  ["showcaseImage2", "Kotak Proses — Satu Akun & Satu Saldo"],
-                  ["ctaImage", "Latar CTA"],
-                  ["feature1Image", "Foto Kartu Fitur Simpanan (bagian gelap)"],
-                  ["feature2Image", "Foto Kartu Fitur Pinjaman (bagian gelap)"],
-                  ["feature3Image", "Foto Kartu Fitur Keuangan (bagian gelap)"],
+                  ["showcaseImage2", "Foto bagian Cara Bergabung"],
+                  ["ctaImage", "Latar ajakan penutup"],
+                  ["feature1Image", "Foto kartu Simpanan"],
+                  ["feature3Image", "Foto kartu Keuangan"],
                 ] as const
               ).map(([name, label]) => (
                 <label
@@ -129,6 +105,7 @@ export default async function Page({
                   {label}
                   <div className="mt-3 aspect-[16/8] overflow-hidden rounded-xl bg-slate-100">
                     {c[name] ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- CMS media
                       <img
                         src={mediaUrl(c[name])}
                         alt=""
@@ -136,7 +113,7 @@ export default async function Page({
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center text-xs text-slate-400">
-                        Menggunakan visual bawaan
+                        Belum ada foto, bagian ini tampil tanpa gambar
                       </div>
                     )}
                   </div>
@@ -146,6 +123,16 @@ export default async function Page({
                     accept="image/jpeg,image/png,image/webp"
                     className="mt-3 block w-full text-xs font-normal text-slate-500"
                   />
+                  {c[name] && (
+                    <span className="mt-3 flex items-center gap-2 text-xs font-normal text-slate-600">
+                      <input
+                        type="checkbox"
+                        name={`remove_${name}`}
+                        className="h-4 w-4 rounded border-slate-300"
+                      />
+                      Hapus foto ini
+                    </span>
+                  )}
                 </label>
               ))}
             </div>
@@ -153,14 +140,14 @@ export default async function Page({
           {groups.map((group) => (
             <section
               key={group.title}
-              className="rounded-[28px] border border-slate-100 bg-white p-7 shadow-sm"
+              className="rounded-card border border-slate-200/70 bg-white p-5 shadow-sm sm:p-7"
             >
               <h3 className="text-lg font-bold">{group.title}</h3>
-              <div className="mt-5 grid grid-cols-2 gap-4">
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 {group.fields.map(([name, label]) => (
                   <label
                     key={name}
-                    className={`text-sm font-semibold text-slate-700 ${name.endsWith("Text") || name === "heroTitle" || name === "featureTitle" || name === "ctaTitle" ? "col-span-2" : ""}`}
+                    className={`text-sm font-semibold text-slate-700 ${name.endsWith("Text") || name === "heroTitle" || name === "featureTitle" || name === "ctaTitle" ? "sm:col-span-2" : ""}`}
                   >
                     {label}
                     {name.endsWith("Text") ? (

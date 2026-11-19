@@ -86,8 +86,8 @@ export default async function Page({
         title="Hasil Usaha"
         subtitle="Bunga jasa yang terealisasi dari pembayaran angsuran"
       />
-      <main className="ml-[280px] min-h-screen bg-slate-50 px-8 pb-10 pt-32">
-        <section className="rounded-[28px] bg-gradient-to-br from-emerald-600 to-emerald-800 p-7 text-white">
+      <main className="min-h-screen bg-slate-50 px-4 pb-12 pt-24 sm:px-6 lg:ml-[280px] lg:px-10 lg:pt-28">
+        <section className="rounded-card bg-gradient-to-br from-emerald-600 to-emerald-800 p-7 text-white">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-emerald-100">
@@ -103,7 +103,7 @@ export default async function Page({
             <TrendingUp size={40} />
           </div>
         </section>
-        <section className="mt-6 rounded-[28px] bg-white p-7 shadow-sm">
+        <section className="mt-6 rounded-card bg-white p-7 shadow-sm">
           <h3 className="text-lg font-bold">Riwayat Hasil Usaha</h3>
           <p className="text-sm text-slate-500">
             Diakui saat pembayaran angsuran diterima · 10 data per halaman

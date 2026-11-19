@@ -98,7 +98,7 @@ export function LoanSimulator() {
   );
 
   return (
-    <section className="mt-6 rounded-[28px] bg-gradient-to-br from-blue-700 to-blue-950 p-7 text-white shadow-xl shadow-blue-900/10">
+    <section className="mt-6 rounded-card bg-gradient-to-br from-blue-700 to-blue-950 p-7 text-white shadow-xl shadow-blue-900/10">
       <div className="flex items-start justify-between gap-6">
         <div>
           <div className="flex items-center gap-2">
@@ -113,7 +113,7 @@ export function LoanSimulator() {
           Maksimal 20 bulan
         </span>
       </div>
-      <div className="mt-6 grid grid-cols-4 gap-4">
+      <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <label className="text-sm font-semibold text-blue-100">
           Status Kepegawaian
           <select

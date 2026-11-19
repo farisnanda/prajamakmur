@@ -9,7 +9,19 @@ export async function proxy(request: NextRequest) {
     cookieName: "praja-makmur.session-token",
   });
 
-  if (token) return NextResponse.next();
+  if (token) {
+    // Wajib ganti kata sandi awal sebelum memakai bagian aplikasi mana pun.
+    if (
+      token.mustChangePassword &&
+      !request.nextUrl.pathname.endsWith("/ganti-password")
+    ) {
+      const changeUrl = request.nextUrl.clone();
+      changeUrl.pathname = "/ganti-password";
+      changeUrl.search = "";
+      return NextResponse.redirect(changeUrl);
+    }
+    return NextResponse.next();
+  }
 
   const loginUrl = request.nextUrl.clone();
   loginUrl.pathname = "/login";
@@ -24,5 +36,15 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/anggota/:path*", "/simpanan/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    "/anggota/:path*",
+    "/simpanan/:path*",
+    "/pinjaman/:path*",
+    "/pengajuan-pinjaman/:path*",
+    "/penarikan-sukarela/:path*",
+    "/akuntansi/:path*",
+    "/pengaturan/:path*",
+    "/ganti-password",
+  ],
 };

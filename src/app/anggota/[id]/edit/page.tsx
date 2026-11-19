@@ -31,14 +31,14 @@ export default async function EditMemberPage({
         title="Edit Anggota"
         subtitle={`Perbarui data ${member.name}`}
       />
-      <main className="ml-[280px] min-h-screen bg-slate-50 px-8 pb-10 pt-32">
+      <main className="min-h-screen bg-slate-50 px-4 pb-12 pt-24 sm:px-6 lg:ml-[280px] lg:px-10 lg:pt-28">
         <Link
           href="/anggota"
           className="mb-5 inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-blue-600"
         >
           <ArrowLeft size={17} /> Kembali ke daftar anggota
         </Link>
-        <section className="rounded-[28px] border border-slate-100 bg-white p-8 shadow-sm">
+        <section className="rounded-card border border-slate-100 bg-white p-8 shadow-sm">
           <div className="mb-8">
             <h3 className="text-xl font-bold text-slate-900">
               Informasi Anggota

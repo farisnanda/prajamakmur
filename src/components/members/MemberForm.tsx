@@ -137,7 +137,7 @@ export function MemberForm({
       <div className="flex justify-end border-t border-slate-100 pt-6">
         <button
           disabled={pending}
-          className="flex h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:opacity-60"
+          className="flex h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-60"
         >
           {pending ? (
             <LoaderCircle size={18} className="animate-spin" />

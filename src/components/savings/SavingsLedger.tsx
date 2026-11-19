@@ -121,18 +121,18 @@ export async function SavingsLedger({
         title={title}
         subtitle="Ledger transaksi simpanan anggota"
       />
-      <main className="ml-[280px] min-h-screen bg-slate-50 px-8 pb-10 pt-32">
+      <main className="min-h-screen bg-slate-50 px-4 pb-12 pt-24 sm:px-6 lg:ml-[280px] lg:px-10 lg:pt-28">
         {filters.success && (
           <div className="mb-5 rounded-xl bg-emerald-50 p-4 text-sm font-bold text-emerald-700">
             Transaksi berhasil dicatat.
           </div>
         )}
-        <section className="grid grid-cols-3 gap-5">
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <Stat label="Total Simpanan" value={rupiah(deposits - withdrawals)} />
           <Stat label="Total Setoran" value={rupiah(deposits)} />
           <Stat label="Total Penarikan" value={rupiah(withdrawals)} />
         </section>
-        <section className="mt-6 rounded-[28px] bg-white p-7 shadow-sm">
+        <section className="mt-6 rounded-card bg-white p-7 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-bold">Transaksi {title}</h3>
@@ -269,7 +269,7 @@ export async function SavingsLedger({
 }
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[24px] bg-white p-6 shadow-sm">
+    <div className="rounded-card bg-white p-6 shadow-sm">
       <p className="text-sm text-slate-500">{label}</p>
       <p className="mt-2 text-2xl font-bold">{value}</p>
     </div>

@@ -39,13 +39,13 @@ export default async function Page({
         title="Verifikasi Penarikan Sukarela"
         subtitle="Verifikasi transfer dan catat pembukuan otomatis"
       />
-      <main className="ml-[280px] min-h-screen bg-slate-50 px-8 pb-10 pt-32">
+      <main className="min-h-screen bg-slate-50 px-4 pb-12 pt-24 sm:px-6 lg:ml-[280px] lg:px-10 lg:pt-28">
         {q.success && (
           <div className="mb-5 rounded-xl bg-emerald-50 p-4 text-sm font-bold text-emerald-700">
             Transfer, transaksi, dan jurnal pembukuan berhasil dicatat.
           </div>
         )}
-        <section className="rounded-[28px] bg-white p-7 shadow-sm">
+        <section className="rounded-card bg-white p-7 shadow-sm">
           <h3 className="text-lg font-bold">Daftar Pengajuan Penarikan</h3>
           <div className="mt-5 overflow-x-auto">
             <table className="w-full text-left text-sm">

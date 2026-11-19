@@ -104,7 +104,7 @@ export default async function LoansPage({
         title="Pinjaman"
         subtitle="Approval berjenjang dan pencairan pinjaman anggota"
       />
-      <main className="ml-[280px] min-h-screen bg-slate-50 px-8 pb-10 pt-32">
+      <main className="min-h-screen bg-slate-50 px-4 pb-12 pt-24 sm:px-6 lg:ml-[280px] lg:px-10 lg:pt-28">
         {query.success && (
           <div className="mb-6 rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-4 text-sm font-semibold text-emerald-700">
             Tahap pinjaman berhasil diproses.
@@ -119,7 +119,7 @@ export default async function LoansPage({
                 : "Pengajuan tidak ditemukan atau sudah diproses."}
           </div>
         )}
-        <section className="grid grid-cols-3 gap-5">
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <Summary
             label="Antrean Tahap Anda"
             value={`${queue.length} pengajuan`}
@@ -185,8 +185,8 @@ function LoanList({
 }) {
   const pending = Boolean(action);
   return (
-    <div className="rounded-[28px] border border-slate-100 bg-white p-7 shadow-sm">
-      <h3 className="text-lg font-bold text-slate-900">{title}</h3>
+    <div className="rounded-card border border-slate-200/70 bg-white p-5 shadow-sm sm:p-7">
+      <h3 className="text-base font-semibold text-slate-900 sm:text-lg">{title}</h3>
       <p className="text-sm text-slate-500">
         {pending
           ? "Pengajuan yang menunggu tindakan Anda"
@@ -318,11 +318,11 @@ function Summary({
     blue: "bg-blue-50 text-blue-600",
   };
   return (
-    <div className="rounded-[24px] border border-slate-100 bg-white p-6 shadow-sm">
+    <div className="rounded-card border border-slate-200/70 bg-white p-5 shadow-sm sm:p-6">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-slate-500">{label}</p>
-          <p className="mt-2 text-2xl font-bold text-slate-900">{value}</p>
+          <p className="mt-1.5 text-2xl font-semibold tracking-tight text-slate-900 tabular-nums">{value}</p>
         </div>
         <div
           className={`flex h-12 w-12 items-center justify-center rounded-2xl ${colors[tone]}`}

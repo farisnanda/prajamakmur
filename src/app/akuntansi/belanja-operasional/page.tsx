@@ -87,14 +87,14 @@ export default async function Page({
         title="Belanja Operasional"
         subtitle="Pengeluaran operasional berdasarkan sumber kas"
       />
-      <main className="ml-[280px] min-h-screen bg-slate-50 px-8 pb-10 pt-32">
+      <main className="min-h-screen bg-slate-50 px-4 pb-12 pt-24 sm:px-6 lg:ml-[280px] lg:px-10 lg:pt-28">
         <div className="rounded-2xl bg-blue-600 p-6 text-white">
           <p className="text-sm text-blue-100">Total Belanja Operasional</p>
           <p className="mt-2 text-3xl font-bold">
             {rp(total._sum.amount?.toNumber() ?? 0)}
           </p>
         </div>
-        <section className="mt-6 rounded-[28px] bg-white p-7 shadow-sm">
+        <section className="mt-6 rounded-card bg-white p-7 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-bold">Riwayat Belanja</h3>

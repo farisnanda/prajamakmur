@@ -1,8 +1,17 @@
 @import "tailwindcss";
 
+/* ------------------------------------------------------------------
+   Praja Makmur design tokens
+   Mood: trust, calm, clarity (financial co-op for civil servants).
+   One accent (refined royal blue) + neutral slate. Status colours
+   (emerald / amber / red) keep Tailwind's defaults.
+   ------------------------------------------------------------------ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: oklch(0.985 0.003 260);
+  --foreground: oklch(0.21 0.02 262);
+
+  --sidebar-width: 280px;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @theme inline {
@@ -12,30 +21,81 @@
   --font-mono: var(--font-geist-mono);
 }
 
+@theme {
+  /* Brand accent: deeper and calmer than stock Tailwind blue, so every
+     existing bg-blue-*, text-blue-* and ring-blue-* in the app shifts
+     together. 600 is the primary action colour (AA with white text). */
+  --color-blue-50: oklch(0.972 0.013 262);
+  --color-blue-100: oklch(0.938 0.028 262);
+  --color-blue-200: oklch(0.882 0.054 262);
+  --color-blue-300: oklch(0.8 0.092 262);
+  --color-blue-400: oklch(0.68 0.14 262);
+  --color-blue-500: oklch(0.585 0.168 262);
+  --color-blue-600: oklch(0.505 0.172 262);
+  --color-blue-700: oklch(0.445 0.156 262);
+  --color-blue-800: oklch(0.375 0.128 263);
+  --color-blue-900: oklch(0.31 0.098 264);
+  --color-blue-950: oklch(0.225 0.07 265);
+
+  /* Page canvas: a hair cooler than stock slate-50 so white cards lift. */
+  --color-slate-50: oklch(0.977 0.004 260);
+
+  /* Shared card radius (was a mix of 24px / 28px). */
+  --radius-card: 1.25rem;
+
+  /* Softer, layered elevation. */
+  --shadow-sm: 0 1px 2px oklch(0.25 0.03 262 / 0.04),
+    0 1px 3px oklch(0.25 0.03 262 / 0.04);
+  --shadow-md: 0 2px 4px oklch(0.25 0.03 262 / 0.04),
+    0 8px 24px -6px oklch(0.25 0.03 262 / 0.1);
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Shared data-table styling. Filters, search, pagination and actions remain page-owned. */
+h1,
+h2,
+h3 {
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+/* Clear, consistent keyboard focus across the whole app. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-blue-500);
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+
+::selection {
+  background: var(--color-blue-100);
+  color: var(--color-blue-900);
+}
+
+/* ------------------------------------------------------------------
+   Shared data tables. Filters, search, pagination and actions remain
+   page-owned. Numbers line up via tabular figures.
+   ------------------------------------------------------------------ */
 main table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  color: #334155;
-}
-
-main table thead tr {
-  background: linear-gradient(90deg, #f8fafc 0%, #f1f5f9 100%);
+  color: var(--color-slate-600);
+  font-variant-numeric: tabular-nums;
 }
 
 main table thead th {
-  border-block: 1px solid #e2e8f0;
-  padding: 0.9rem 1rem;
-  color: #64748b;
-  font-size: 0.7rem;
-  font-weight: 800;
+  background: var(--color-slate-50);
+  border-block: 1px solid var(--color-slate-200);
+  padding: 0.75rem 1rem;
+  color: var(--color-slate-500);
+  font-size: 0.6875rem;
+  font-weight: 600;
   letter-spacing: 0.06em;
   line-height: 1.25rem;
   text-transform: uppercase;
@@ -43,30 +103,24 @@ main table thead th {
 }
 
 main table thead th:first-child {
-  border-left: 1px solid #e2e8f0;
-  border-radius: 0.85rem 0 0 0.85rem;
+  border-left: 1px solid var(--color-slate-200);
+  border-radius: 0.75rem 0 0 0.75rem;
 }
 
 main table thead th:last-child {
-  border-right: 1px solid #e2e8f0;
-  border-radius: 0 0.85rem 0.85rem 0;
+  border-right: 1px solid var(--color-slate-200);
+  border-radius: 0 0.75rem 0.75rem 0;
 }
 
 main table tbody td {
-  border-bottom: 1px solid #f1f5f9;
-  padding: 1rem;
+  border-bottom: 1px solid var(--color-slate-100);
+  padding: 0.875rem 1rem;
   vertical-align: middle;
-  transition:
-    background-color 160ms ease,
-    color 160ms ease;
+  transition: background-color 160ms ease;
 }
 
 main table tbody tr:hover td {
-  background-color: #f8fbff;
-}
-
-main table tbody tr:hover td:first-child {
-  box-shadow: inset 3px 0 0 #3b82f6;
+  background-color: var(--color-blue-50);
 }
 
 main table tbody tr:last-child td {
@@ -74,119 +128,140 @@ main table tbody tr:last-child td {
 }
 
 main table tbody td:first-child {
-  border-radius: 0.7rem 0 0 0.7rem;
+  border-radius: 0.625rem 0 0 0.625rem;
 }
 
 main table tbody td:last-child {
-  border-radius: 0 0.7rem 0.7rem 0;
+  border-radius: 0 0.625rem 0.625rem 0;
 }
 
 main table tbody b,
 main table tbody strong {
-  color: #0f172a;
-  font-weight: 750;
+  color: var(--color-slate-900);
+  font-weight: 600;
 }
 
-main table button,
-main table a {
-  transition:
-    transform 150ms ease,
-    box-shadow 150ms ease,
-    background-color 150ms ease;
+/* Money and counters read best with aligned digits. */
+.tabular-nums,
+main [class*="text-2xl"],
+main [class*="text-3xl"] {
+  font-variant-numeric: tabular-nums;
 }
 
-main table button:hover,
-main table a:hover {
-  transform: translateY(-1px);
+/* Mobile navigation drawer (sidebar) */
+@media (max-width: 1023px) {
+  body[data-nav-open="true"] {
+    overflow: hidden;
+  }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+
+/* ------------------------------------------------------------------
+   Public landing page. One restrained motion: content rises softly
+   into view once. Everything is static under reduced motion.
+   ------------------------------------------------------------------ */
 @keyframes landing-rise {
   from {
     opacity: 0;
-    transform: translateY(42px) scale(0.985);
+    transform: translateY(24px);
   }
   to {
     opacity: 1;
-    transform: none;
-  }
-}
-@keyframes landing-float {
-  0%,
-  100% {
-    transform: translateY(0) rotate(-0.4deg);
-  }
-  50% {
-    transform: translateY(-14px) rotate(0.4deg);
-  }
-}
-@keyframes landing-orbit {
-  from {
-    transform: rotate(0deg) translateX(8px) rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg) translateX(8px) rotate(-360deg);
-  }
-}
-@keyframes landing-shimmer {
-  from {
-    transform: translateX(-140%) skewX(-18deg);
-  }
-  to {
-    transform: translateX(240%) skewX(-18deg);
+    transform: translateY(0);
   }
 }
 
-.landing-page section > .landing-container,
-.landing-page section > div {
-  animation: landing-rise 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+.landing-page .landing-hero > * {
+  animation: landing-rise 0.9s var(--ease-out) both;
 }
-.landing-page .landing-float {
-  animation: landing-float 5.5s ease-in-out infinite;
+.landing-page .landing-hero > *:nth-child(2) {
+  animation-delay: 0.12s;
 }
-.landing-page .landing-orbit {
-  animation: landing-orbit 13s linear infinite;
+
+@supports (animation-timeline: view()) {
+  .landing-page .landing-reveal {
+    animation: landing-rise linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 35%;
+  }
 }
+
 .landing-page .landing-card {
   transition:
-    transform 0.35s ease,
-    box-shadow 0.35s ease,
-    border-color 0.35s ease;
+    transform 0.4s var(--ease-out),
+    box-shadow 0.4s var(--ease-out),
+    border-color 0.4s var(--ease-out);
 }
-.landing-page .landing-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 28px 70px -30px rgba(30, 64, 175, 0.35);
-  border-color: #bfdbfe;
-}
-.landing-page .landing-shine {
-  position: relative;
-  overflow: hidden;
-}
-.landing-page .landing-shine::after {
-  content: "";
-  position: absolute;
-  inset: -30% auto -30% 0;
-  width: 35%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.3),
-    transparent
-  );
-  animation: landing-shimmer 5s ease-in-out infinite;
-  pointer-events: none;
-}
-@supports (animation-timeline: view()) {
-  .landing-page section > .landing-container,
-  .landing-page section > div {
-    animation-timeline: view();
-    animation-range: entry 8% cover 32%;
+@media (hover: hover) {
+  .landing-page .landing-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-blue-200);
   }
 }
+
 @media (prefers-reduced-motion: reduce) {
   .landing-page *,
+  .landing-page *::before,
   .landing-page *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
+    animation: none !important;
     scroll-behavior: auto !important;
   }
+}
+
+html:has(.landing-page) {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+/* Landing loan simulator sliders */
+.landing-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--color-blue-600) var(--fill, 50%),
+    var(--color-slate-200) var(--fill, 50%)
+  );
+  cursor: pointer;
+}
+.landing-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: white;
+  border: 2px solid var(--color-blue-600);
+  box-shadow: 0 2px 6px oklch(0.25 0.03 262 / 0.2);
+  transition: transform 150ms var(--ease-out);
+}
+.landing-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: white;
+  border: 2px solid var(--color-blue-600);
+  box-shadow: 0 2px 6px oklch(0.25 0.03 262 / 0.2);
+}
+.landing-range:active::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+
+/* FAQ disclosure */
+.landing-faq summary::-webkit-details-marker {
+  display: none;
+}
+.landing-faq[open] .landing-faq-icon {
+  transform: rotate(45deg);
 }

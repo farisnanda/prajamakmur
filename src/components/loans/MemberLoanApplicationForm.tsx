@@ -31,7 +31,7 @@ export function MemberLoanApplicationForm({
           {state.message}
         </p>
       )}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         <label className="text-sm font-semibold text-slate-700">
           Nominal
           <MoneyInput

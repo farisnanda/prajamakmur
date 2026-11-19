@@ -25,11 +25,7 @@ async function admin() {
 export async function createMemberAccount(fd: FormData) {
   await admin();
   const p = z
-    .object({
-      memberId: z.string().min(1),
-      email: z.email().trim().toLowerCase(),
-      password: z.string().min(8),
-    })
+    .object({ memberId: z.string().min(1) })
     .safeParse(Object.fromEntries(fd));
   if (!p.success) redirect("/pengaturan/akun?error=invalid");
   const member = await prisma.member.findUnique({
@@ -37,14 +33,17 @@ export async function createMemberAccount(fd: FormData) {
     include: { user: true },
   });
   if (!member || member.user) redirect("/pengaturan/akun?error=linked");
+  if (!member.employeeNumber) redirect("/pengaturan/akun?error=nip");
   try {
+    // Login memakai NIP/NI. Password awal = NIP/NI dan wajib diganti saat masuk pertama.
     await prisma.user.create({
       data: {
         name: member.name,
-        email: p.data.email,
-        password: await bcrypt.hash(p.data.password, 10),
+        email: `${member.employeeNumber.toLowerCase()}@anggota.praja-makmur.local`,
+        password: await bcrypt.hash(member.employeeNumber, 10),
         role: "ANGGOTA",
         isActive: true,
+        mustChangePassword: true,
         memberId: member.id,
       },
     });
@@ -81,6 +80,9 @@ export async function updateAccount(fd: FormData) {
     (target.role === "SUPER_ADMIN" || p.data.role === "SUPER_ADMIN")
   )
     redirect("/pengaturan/akun?error=permission");
+  // Hanya Super Admin yang boleh menetapkan atau mengubah role.
+  if (s.user.role !== "SUPER_ADMIN" && p.data.role !== target.role)
+    redirect("/pengaturan/akun?error=role");
   if (
     p.data.userId === s.user.id &&
     (p.data.role !== s.user.role || p.data.isActive !== "true")
@@ -122,7 +124,29 @@ export async function resetAccountPassword(fd: FormData) {
     redirect("/pengaturan/akun?error=permission");
   await prisma.user.update({
     where: { id: p.data.userId },
-    data: { password: await bcrypt.hash(p.data.password, 10) },
+    data: {
+      password: await bcrypt.hash(p.data.password, 10),
+      mustChangePassword: true,
+    },
+  });
+  redirect("/pengaturan/akun?success=password");
+}
+
+export async function resetPasswordToNip(fd: FormData) {
+  const s = await admin();
+  const userId = z.string().min(1).safeParse(fd.get("userId"));
+  if (!userId.success) redirect("/pengaturan/akun?error=invalid");
+  const target = await prisma.user.findUnique({
+    where: { id: userId.data },
+    select: { role: true, member: { select: { employeeNumber: true } } },
+  });
+  const nip = target?.member?.employeeNumber;
+  if (!target || !nip) redirect("/pengaturan/akun?error=nip");
+  if (s.user.role === "ADMIN_KOPERASI" && target.role === "SUPER_ADMIN")
+    redirect("/pengaturan/akun?error=permission");
+  await prisma.user.update({
+    where: { id: userId.data },
+    data: { password: await bcrypt.hash(nip, 10), mustChangePassword: true },
   });
   redirect("/pengaturan/akun?success=password");
 }

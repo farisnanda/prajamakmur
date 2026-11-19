@@ -88,7 +88,7 @@ export function BulkMandatorySavingsForm({
         type="button"
         onClick={() => setOpen(true)}
         disabled={!members.length}
-        className="flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <CheckSquare size={18} />
         Catat Wajib Bulanan
@@ -280,7 +280,7 @@ export function BulkMandatorySavingsForm({
                   </button>
                   <button
                     disabled={pending || !selectedIds.length}
-                    className="flex h-12 items-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-12 items-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {pending ? (
                       <LoaderCircle size={18} className="animate-spin" />

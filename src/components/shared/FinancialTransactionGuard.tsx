@@ -35,7 +35,7 @@ export function FinancialTransactionGuard() {
       aria-modal="true"
       aria-labelledby="financial-confirm-title"
     >
-      <div className="w-full max-w-lg overflow-hidden rounded-[28px] bg-white shadow-2xl">
+      <div className="w-full max-w-lg overflow-hidden rounded-card bg-white shadow-2xl">
         <div className="flex items-start justify-between border-b border-slate-100 p-6">
           <div className="flex gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">

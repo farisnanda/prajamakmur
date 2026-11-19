@@ -1,6 +1,6 @@
-import { Bell, Search } from "lucide-react";
 import type { Session } from "next-auth";
 import { LogoutButton } from "@/components/auth/LogoutButton";
+import { MobileNavButton } from "./MobileNavButton";
 
 const roleLabels = {
   SUPER_ADMIN: "Super Admin",
@@ -24,36 +24,29 @@ export function Topbar({
   const initial = user.name?.charAt(0).toUpperCase() ?? "P";
 
   return (
-    <header className="fixed left-[280px] right-0 top-0 z-10 flex h-24 items-center justify-between border-b border-slate-200 bg-white px-8">
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">{title}</h2>
-        <p className="text-sm text-slate-500">{subtitle}</p>
+    <header className="fixed left-0 right-0 top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-200/80 bg-white/85 px-4 backdrop-blur-xl sm:px-6 lg:left-[280px] lg:h-20 lg:px-10">
+      <MobileNavButton />
+
+      <div className="min-w-0 flex-1">
+        <h1 className="truncate text-base font-semibold text-slate-900 sm:text-lg lg:text-xl">
+          {title}
+        </h1>
+        {subtitle && (
+          <p className="hidden truncate text-sm text-slate-500 sm:block">{subtitle}</p>
+        )}
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="flex h-12 w-[320px] items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4">
-          <Search size={18} className="text-slate-400" />
-          <input
-            placeholder="Cari anggota, transaksi..."
-            className="w-full bg-transparent text-sm outline-none"
-          />
+      <div className="flex shrink-0 items-center gap-1 rounded-2xl border border-slate-200/80 bg-white py-1 pl-1 pr-1 shadow-sm sm:gap-3 sm:pr-1.5">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-sm font-semibold text-white">
+          {initial}
         </div>
-
-        <button className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 text-slate-600">
-          <Bell size={20} />
-          <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-blue-600" />
-        </button>
-
-        <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-3 py-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-sm font-bold text-white">
-            {initial}
-          </div>
-          <div>
-            <p className="text-sm font-bold text-slate-900">{user.name}</p>
-            <p className="text-xs text-slate-500">{roleLabels[user.role]}</p>
-          </div>
-          <LogoutButton />
+        <div className="hidden min-w-0 max-w-[180px] md:block">
+          <p className="truncate text-sm font-semibold leading-tight text-slate-900">
+            {user.name}
+          </p>
+          <p className="truncate text-xs text-slate-500">{roleLabels[user.role]}</p>
         </div>
+        <LogoutButton />
       </div>
     </header>
   );

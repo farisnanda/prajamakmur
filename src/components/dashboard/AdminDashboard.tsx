@@ -244,8 +244,8 @@ export async function AdminDashboard({
         title="Dashboard Admin"
         subtitle={`Ringkasan koperasi · ${new Intl.DateTimeFormat("id-ID", { dateStyle: "long" }).format(now)}`}
       />
-      <main className="ml-[280px] min-h-screen bg-slate-50 px-8 pb-10 pt-32">
-        <section className="grid grid-cols-5 gap-4">
+      <main className="min-h-screen bg-slate-50 px-4 pb-12 pt-24 sm:px-6 lg:ml-[280px] lg:px-10 lg:pt-28">
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
           <Stat
             icon={Users}
             label="Anggota Aktif"
@@ -277,9 +277,9 @@ export async function AdminDashboard({
             note="Bunga jasa yang telah terealisasi"
           />
         </section>
-        <section className="mt-6 overflow-hidden rounded-[28px] bg-gradient-to-br from-blue-700 via-blue-800 to-blue-950 text-white shadow-xl shadow-blue-900/15">
-          <div className="grid grid-cols-12">
-            <div className="col-span-4 border-r border-white/10 p-7">
+        <section className="mt-6 overflow-hidden rounded-card bg-gradient-to-br from-blue-700 via-blue-800 to-blue-950 text-white shadow-md">
+          <div className="grid lg:grid-cols-12">
+            <div className="border-b border-white/10 p-6 sm:p-7 lg:col-span-4 lg:border-b-0 lg:border-r">
               <p className="text-sm font-semibold text-blue-200">
                 Kondisi Keuangan Keseluruhan
               </p>
@@ -301,7 +301,7 @@ export async function AdminDashboard({
                 </span>
               </div>
             </div>
-            <div className="col-span-8 grid grid-cols-3">
+            <div className="grid sm:grid-cols-3 lg:col-span-8">
               <FinanceSummary
                 label="Pemasukan Global"
                 value={globalIncome}
@@ -320,11 +320,11 @@ export async function AdminDashboard({
             </div>
           </div>
         </section>
-        <section className="mt-6 grid grid-cols-12 gap-6">
-          <div className="col-span-8 rounded-[28px] bg-white p-7 shadow-sm">
+        <section className="mt-6 grid gap-6 xl:grid-cols-12">
+          <div className="rounded-card border border-slate-200/70 bg-white p-6 shadow-sm sm:p-7 xl:col-span-8">
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-lg font-bold">
+                <h3 className="text-base font-semibold text-slate-900 sm:text-lg">
                   Perkembangan Keuangan 12 Bulan
                 </h3>
                 <p className="text-sm text-slate-500">
@@ -337,8 +337,8 @@ export async function AdminDashboard({
             </div>
             <TrendChart data={trend} />
           </div>
-          <div className="col-span-4 rounded-[28px] bg-white p-7 shadow-sm">
-            <h3 className="text-lg font-bold">Pekerjaan Menunggu</h3>
+          <div className="rounded-card border border-slate-200/70 bg-white p-6 shadow-sm sm:p-7 xl:col-span-4">
+            <h3 className="text-base font-semibold text-slate-900 sm:text-lg">Pekerjaan Menunggu</h3>
             <p className="text-sm text-slate-500">
               Tindakan yang perlu segera diselesaikan
             </p>
@@ -376,9 +376,9 @@ export async function AdminDashboard({
             )}
           </div>
         </section>
-        <section className="mt-6 grid grid-cols-12 gap-6">
-          <div className="col-span-5 rounded-[28px] bg-white p-7 shadow-sm">
-            <h3 className="text-lg font-bold">Komposisi Simpanan</h3>
+        <section className="mt-6 grid gap-6 xl:grid-cols-12">
+          <div className="rounded-card border border-slate-200/70 bg-white p-6 shadow-sm sm:p-7 xl:col-span-5">
+            <h3 className="text-base font-semibold text-slate-900 sm:text-lg">Komposisi Simpanan</h3>
             <p className="text-sm text-slate-500">
               Saldo bersih per jenis simpanan
             </p>
@@ -401,12 +401,12 @@ export async function AdminDashboard({
               ))}
             </div>
           </div>
-          <div className="col-span-7 rounded-[28px] bg-white p-7 shadow-sm">
-            <h3 className="text-lg font-bold">Kondisi Pinjaman</h3>
+          <div className="rounded-card border border-slate-200/70 bg-white p-6 shadow-sm sm:p-7 xl:col-span-7">
+            <h3 className="text-base font-semibold text-slate-900 sm:text-lg">Kondisi Pinjaman</h3>
             <p className="text-sm text-slate-500">
               Posisi seluruh proses pinjaman
             </p>
-            <div className="mt-6 grid grid-cols-5 gap-3">
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               {status.map((x) => (
                 <div key={x.l} className="rounded-2xl bg-slate-50 p-4">
                   <div className={`mb-4 h-2 w-8 rounded-full ${x.c}`} />
@@ -423,10 +423,10 @@ export async function AdminDashboard({
             </div>
           </div>
         </section>
-        <section className="mt-6 rounded-[28px] bg-white p-7 shadow-sm">
+        <section className="mt-6 rounded-card border border-slate-200/70 bg-white p-6 shadow-sm sm:p-7">
           <div className="flex justify-between">
             <div>
-              <h3 className="text-lg font-bold">Aktivitas Simpanan Terbaru</h3>
+              <h3 className="text-base font-semibold text-slate-900 sm:text-lg">Aktivitas Simpanan Terbaru</h3>
               <p className="text-sm text-slate-500">
                 Enam transaksi terakhir yang tercatat
               </p>
@@ -435,7 +435,7 @@ export async function AdminDashboard({
               Lihat semua
             </Link>
           </div>
-          <table className="mt-5 w-full text-left text-sm">
+          <div className="mt-5 overflow-x-auto"><table className="w-full min-w-[640px] text-left text-sm">
             <thead>
               <tr className="border-b text-xs uppercase text-slate-400">
                 <th className="py-3">Anggota</th>
@@ -478,7 +478,7 @@ export async function AdminDashboard({
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </section>
       </main>
     </>
@@ -496,12 +496,12 @@ function Stat({
   note: string;
 }) {
   return (
-    <div className="rounded-[24px] bg-white p-5 shadow-sm">
+    <div className="rounded-card border border-slate-200/70 bg-white p-5 shadow-sm">
       <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
         <Icon size={21} />
       </div>
       <p className="mt-4 text-xs font-semibold text-slate-500">{label}</p>
-      <p className="mt-1 text-xl font-bold">{value}</p>
+      <p className="mt-1 truncate text-xl font-semibold tracking-tight text-slate-900 tabular-nums">{value}</p>
       <p className="mt-1 truncate text-xs text-slate-400">{note}</p>
     </div>
   );
@@ -521,11 +521,11 @@ function FinanceSummary({
     blue: "text-sky-300",
   }[tone];
   return (
-    <div className="flex flex-col justify-center border-r border-white/10 p-7 last:border-r-0">
+    <div className="flex flex-col justify-center border-b border-white/10 p-6 last:border-0 sm:border-b-0 sm:border-r sm:p-7">
       <p className="text-xs font-bold uppercase tracking-wider text-blue-200">
         {label}
       </p>
-      <p className={`mt-3 text-2xl font-bold ${color}`}>{rp(value)}</p>
+      <p className={`mt-3 text-xl font-semibold tabular-nums xl:text-2xl ${color}`}>{rp(value)}</p>
     </div>
   );
 }
@@ -583,8 +583,8 @@ function TrendChart({
       >
         <defs>
           <linearGradient id="savingArea" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#2563eb" stopOpacity=".22" />
-            <stop offset="1" stopColor="#2563eb" stopOpacity="0" />
+            <stop offset="0" stopColor="var(--color-blue-600)" stopOpacity=".22" />
+            <stop offset="1" stopColor="var(--color-blue-600)" stopOpacity="0" />
           </linearGradient>
         </defs>
         {[25, 50, 75, 100].map((y) => (
@@ -605,7 +605,7 @@ function TrendChart({
         <polyline
           points={points("savings")}
           fill="none"
-          stroke="#2563eb"
+          stroke="var(--color-blue-600)"
           strokeWidth="1.5"
           vectorEffect="non-scaling-stroke"
         />

@@ -82,8 +82,8 @@ export default async function Page({
         title="Arus Kas"
         subtitle="Saldo dan pencatatan seluruh rekening kas koperasi"
       />
-      <main className="ml-[280px] min-h-screen bg-slate-50 px-8 pb-10 pt-32">
-        <section className="grid grid-cols-3 gap-4">
+      <main className="min-h-screen bg-slate-50 px-4 pb-12 pt-24 sm:px-6 lg:ml-[280px] lg:px-10 lg:pt-28">
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {accounts.map((a) => (
             <div key={a.id} className="rounded-2xl bg-white p-5 shadow-sm">
               <p className="text-sm text-slate-500">{a.name}</p>
@@ -93,7 +93,7 @@ export default async function Page({
             </div>
           ))}
         </section>
-        <section className="mt-6 rounded-[28px] bg-white p-7 shadow-sm">
+        <section className="mt-6 rounded-card bg-white p-7 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-bold">Riwayat Arus Kas</h3>
