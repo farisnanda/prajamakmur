@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 const roles = [
   "SUPER_ADMIN",
@@ -55,6 +56,12 @@ export async function createMemberAccount(fd: FormData) {
       redirect("/pengaturan/akun?error=invalid");
     throw error;
   }
+  await audit({
+    action: "ACCOUNT_CREATE",
+    entity: "User",
+    entityId: member.id,
+    summary: `Membuat akun login untuk ${member.name} (NIP/NI ${member.employeeNumber})`,
+  });
   revalidatePath("/pengaturan/akun");
   redirect("/pengaturan/akun?success=created");
 }
@@ -106,6 +113,13 @@ export async function updateAccount(fd: FormData) {
       redirect("/pengaturan/akun?error=invalid");
     throw error;
   }
+  await audit({
+    action: "ACCOUNT_UPDATE",
+    entity: "User",
+    entityId: p.data.userId,
+    summary: `Mengubah akun ${p.data.name}: role ${target.role} menjadi ${p.data.role}, status ${p.data.isActive === "true" ? "aktif" : "nonaktif"}`,
+    metadata: { roleBefore: target.role, roleAfter: p.data.role, active: p.data.isActive === "true" },
+  });
   revalidatePath("/pengaturan/akun");
   redirect("/pengaturan/akun?success=updated");
 }
@@ -129,6 +143,12 @@ export async function resetAccountPassword(fd: FormData) {
       mustChangePassword: true,
     },
   });
+  await audit({
+    action: "PASSWORD_RESET",
+    entity: "User",
+    entityId: p.data.userId,
+    summary: "Mereset password akun (password baru diisi manual)",
+  });
   redirect("/pengaturan/akun?success=password");
 }
 
@@ -147,6 +167,12 @@ export async function resetPasswordToNip(fd: FormData) {
   await prisma.user.update({
     where: { id: userId.data },
     data: { password: await bcrypt.hash(nip, 10), mustChangePassword: true },
+  });
+  await audit({
+    action: "PASSWORD_RESET",
+    entity: "User",
+    entityId: userId.data,
+    summary: "Mereset password akun ke NIP/NI",
   });
   redirect("/pengaturan/akun?success=password");
 }

@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 
 export type ChangePasswordState = { ok?: boolean; message?: string };
@@ -48,6 +49,12 @@ export async function changePassword(
   await prisma.user.update({
     where: { id: user.id },
     data: { password: await bcrypt.hash(next, 10), mustChangePassword: false },
+  });
+  await audit({
+    action: "PASSWORD_CHANGE",
+    entity: "User",
+    entityId: user.id,
+    summary: "Mengganti password sendiri",
   });
   return { ok: true };
 }

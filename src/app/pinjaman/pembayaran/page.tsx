@@ -204,7 +204,9 @@ export default async function LoanPaymentsPage({
           <Notice tone="error">
             {query.error === "exceeds"
               ? "Nominal melebihi sisa kewajiban."
-              : "Data pembayaran tidak valid."}
+              : query.error === "conflict"
+                ? "Data pinjaman baru saja berubah (mungkin dicatat petugas lain). Muat ulang halaman lalu coba lagi."
+                : "Data pembayaran tidak valid."}
           </Notice>
         )}
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

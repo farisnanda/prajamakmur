@@ -6,6 +6,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
+import { audit } from "@/lib/audit";
+import { logError } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 
 export type VoluntarySavingsState = {
@@ -62,12 +64,19 @@ export async function addVoluntarySavings(
         createdById: session.user.id,
       },
     });
-  } catch {
+  } catch (error) {
+    logError("add-savings", error, { memberId });
     return { message: "Simpanan belum dapat disimpan. Silakan coba lagi." };
   }
 
   revalidatePath(`/anggota/${member.id}`);
   revalidatePath("/simpanan");
+  await audit({
+    action: "SAVINGS_MIGRATE",
+    entity: "Member",
+    entityId: member.id,
+    summary: `Mencatat saldo simpanan sukarela Rp${parsed.data.amount.toLocaleString("id-ID")} (migrasi)`,
+  });
   revalidatePath("/simpanan/sukarela");
   redirect(`/anggota/${member.id}?tab=simpanan&success=voluntary`);
 }
@@ -144,12 +153,19 @@ export async function addMandatorySavings(
       skipDuplicates: true,
     });
     created = result.count;
-  } catch {
+  } catch (error) {
+    logError("add-savings", error, { memberId });
     return { message: "Simpanan belum dapat disimpan. Silakan coba lagi." };
   }
 
   revalidatePath(`/anggota/${member.id}`);
   revalidatePath("/simpanan");
+  await audit({
+    action: "SAVINGS_MIGRATE",
+    entity: "Member",
+    entityId: member.id,
+    summary: `Mencatat simpanan wajib ${fromMonth} sampai ${toMonth} (${created} bulan baru, ${total - created} dilewati) @ Rp${amount.toLocaleString("id-ID")} (migrasi)`,
+  });
   revalidatePath("/simpanan/wajib");
   redirect(
     `/anggota/${member.id}?tab=simpanan&success=mandatory&n=${created}&skip=${total - created}`,

@@ -74,6 +74,13 @@ export default async function Page({
         subtitle="Verifikasi transfer dan catat pembukuan otomatis"
       />
       <main className="min-h-screen bg-slate-50 px-4 pb-12 pt-24 sm:px-6 lg:ml-[280px] lg:px-10 lg:pt-28">
+        {q.error && (
+          <div className="mb-5 rounded-xl bg-red-50 p-4 text-sm font-bold text-red-700">
+            {q.error === "cash"
+              ? "Saldo Kas Umum – Rekening Bank tidak mencukupi untuk penarikan ini."
+              : "Pengajuan tidak ditemukan atau sudah diproses."}
+          </div>
+        )}
         {q.success && (
           <div className="mb-5 rounded-xl bg-emerald-50 p-4 text-sm font-bold text-emerald-700">
             Transfer, transaksi, dan jurnal pembukuan berhasil dicatat.

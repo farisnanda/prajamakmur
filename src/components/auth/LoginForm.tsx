@@ -25,7 +25,12 @@ export function LoginForm() {
     });
 
     if (result?.error) {
-      setError("NIP/NI, email, atau kata sandi tidak sesuai.");
+      const limited = /RATE_LIMITED:(\d+)/.exec(result.error);
+      setError(
+        limited
+          ? `Terlalu banyak percobaan gagal. Coba lagi dalam ${limited[1]} menit.`
+          : "NIP/NI, email, atau kata sandi tidak sesuai.",
+      );
       setIsPending(false);
       return;
     }

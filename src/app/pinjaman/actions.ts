@@ -8,6 +8,7 @@ import { z } from "zod";
 import { annuityPayment } from "@/lib/annuity";
 import { authOptions } from "@/lib/auth";
 import { KAS_UMUM_BANK } from "@/lib/cashAccounts";
+import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 
 export type LoanFormState = {
@@ -99,6 +100,12 @@ export async function createMemberLoanApplication(
   redirect("/pengajuan-pinjaman?success=submitted");
 }
 
+class DisbursementError extends Error {
+  constructor(readonly kind: "invalid" | "cash") {
+    super(kind);
+  }
+}
+
 async function workflowLoan(
   formData: FormData,
   role: string | string[],
@@ -116,13 +123,16 @@ async function workflowLoan(
 
 export async function approveBySalaryTreasurer(formData: FormData) {
   const { loanId } = await workflowLoan(formData, "BENDAHARA", "SUBMITTED");
-  await prisma.loan.update({
-    where: { id: loanId },
+  // Hanya berhasil jika status masih "Diajukan" (cegah klik ganda / dua petugas).
+  const moved = await prisma.loan.updateMany({
+    where: { id: loanId, status: "SUBMITTED" },
     data: {
       status: "SALARY_TREASURER_APPROVED",
       salaryTreasurerApprovedAt: new Date(),
     },
   });
+  if (moved.count === 0) redirect("/pinjaman?error=invalid");
+  await audit({ action: "LOAN_APPROVE", entity: "Loan", entityId: loanId, summary: "Persetujuan tahap 1 (Bendahara)" });
   revalidatePath("/pinjaman");
   redirect("/pinjaman?success=salary-approved");
 }
@@ -149,14 +159,16 @@ export async function approveByChairman(formData: FormData) {
     redirect(
       `/pinjaman?error=insufficient-cash&required=${loan.principalAmount.toString()}&available=${Math.max(0, available)}`,
     );
-  await prisma.loan.update({
-    where: { id: loanId },
+  const moved = await prisma.loan.updateMany({
+    where: { id: loanId, status: "SALARY_TREASURER_APPROVED" },
     data: {
       status: "FINAL_APPROVED",
       finalApprovedAt: new Date(),
       approvedAt: new Date(),
     },
   });
+  if (moved.count === 0) redirect("/pinjaman?error=invalid");
+  await audit({ action: "LOAN_APPROVE", entity: "Loan", entityId: loanId, summary: "Persetujuan akhir (Ketua)" });
   revalidatePath("/pinjaman");
   redirect("/pinjaman?success=final-approved");
 }
@@ -177,10 +189,12 @@ async function rejectLoan(
     .trim()
     .min(5)
     .parse(formData.get("rejectionNote"));
-  await prisma.loan.update({
-    where: { id: loanId },
+  const moved = await prisma.loan.updateMany({
+    where: { id: loanId, status: expected },
     data: { status: "REJECTED", rejectionNote, rejectedAt: new Date() },
   });
+  if (moved.count === 0) redirect("/pinjaman?error=invalid");
+  await audit({ action: "LOAN_REJECT", entity: "Loan", entityId: loanId, summary: `Menolak pengajuan: ${rejectionNote}` });
   revalidatePath("/pinjaman");
   revalidatePath("/pengajuan-pinjaman");
   redirect("/pinjaman?success=rejected");
@@ -224,50 +238,73 @@ export async function disburseLoan(formData: FormData) {
     redirect(
       `/pinjaman?error=insufficient-cash&required=${principal}&available=${cashBefore?.balance.toString() ?? 0}`,
     );
-  await prisma.$transaction(async (tx) => {
-    const cash = await tx.cashAccount.findUnique({
+  let failure: "invalid" | "cash" | null = null;
+  try {
+    await prisma.$transaction(async (tx) => {
+      const cash = await tx.cashAccount.findUnique({
+        where: { code: KAS_UMUM_BANK },
+      });
+      if (!cash) throw new DisbursementError("cash");
+      // Ambil pengajuan hanya jika masih "FINAL_APPROVED": satu pencairan saja.
+      const claimed = await tx.loan.updateMany({
+        where: { id: loanId, status: "FINAL_APPROVED" },
+        data: {
+          status: "ACTIVE",
+          disbursedAt: disbursedNow,
+          transferReference: reference,
+          startDate: start,
+          dueDate: due,
+          monthlyPayment: new Prisma.Decimal(payment),
+        },
+      });
+      if (claimed.count === 0) throw new DisbursementError("invalid");
+      // Kurangi kas hanya jika saldo cukup, dalam satu pernyataan atomik.
+      const debited = await tx.cashAccount.updateMany({
+        where: { id: cash.id, balance: { gte: new Prisma.Decimal(principal) } },
+        data: { balance: { decrement: principal } },
+      });
+      if (debited.count === 0) throw new DisbursementError("cash");
+      await tx.cashTransaction.create({
+        data: {
+          reference: `KAS-PENCAIRAN-${loan.loanNumber}`,
+          accountId: cash.id,
+          type: "OUTFLOW",
+          amount: loan.principalAmount,
+          transactionDate: disbursedNow,
+          description: `Pencairan pinjaman ${loan.loanNumber}`,
+          note: `Transfer ${reference}`,
+        },
+      });
+      await tx.bookkeepingEntry.create({
+        data: {
+          reference: `BK-PENCAIRAN-${loan.loanNumber}`,
+          transactionDate: disbursedNow,
+          description: `Pencairan pinjaman ${loan.loanNumber}`,
+          debitAccount: "Piutang Pinjaman Anggota",
+          creditAccount: cash.name,
+          amount: loan.principalAmount,
+        },
+      });
+    });
+  } catch (error) {
+    if (!(error instanceof DisbursementError)) throw error;
+    failure = error.kind;
+  }
+  if (failure === "cash") {
+    const now = await prisma.cashAccount.findUnique({
       where: { code: KAS_UMUM_BANK },
+      select: { balance: true },
     });
-    if (!cash || cash.balance.toNumber() < principal)
-      throw new Error(
-        "Saldo Kas Umum tidak mencukupi untuk pencairan pinjaman.",
-      );
-    await tx.loan.update({
-      where: { id: loanId },
-      data: {
-        status: "ACTIVE",
-        disbursedAt: disbursedNow,
-        transferReference: reference,
-        startDate: start,
-        dueDate: due,
-        monthlyPayment: new Prisma.Decimal(payment),
-      },
-    });
-    await tx.cashAccount.update({
-      where: { id: cash.id },
-      data: { balance: { decrement: principal } },
-    });
-    await tx.cashTransaction.create({
-      data: {
-        reference: `KAS-PENCAIRAN-${loan.loanNumber}`,
-        accountId: cash.id,
-        type: "OUTFLOW",
-        amount: loan.principalAmount,
-        transactionDate: disbursedNow,
-        description: `Pencairan pinjaman ${loan.loanNumber}`,
-        note: `Transfer ${reference}`,
-      },
-    });
-    await tx.bookkeepingEntry.create({
-      data: {
-        reference: `BK-PENCAIRAN-${loan.loanNumber}`,
-        transactionDate: disbursedNow,
-        description: `Pencairan pinjaman ${loan.loanNumber}`,
-        debitAccount: "Piutang Pinjaman Anggota",
-        creditAccount: cash.name,
-        amount: loan.principalAmount,
-      },
-    });
+    redirect(
+      `/pinjaman?error=insufficient-cash&required=${principal}&available=${now?.balance.toString() ?? 0}`,
+    );
+  }
+  if (failure === "invalid") redirect("/pinjaman?error=invalid");
+  await audit({
+    action: "LOAN_DISBURSE",
+    entity: "Loan",
+    entityId: loanId,
+    summary: `Mencairkan pinjaman ${loan.loanNumber} sebesar Rp${principal.toLocaleString("id-ID")} (transfer ${reference})`,
   });
   revalidatePath("/pinjaman");
   revalidatePath("/dashboard");
@@ -316,33 +353,3 @@ export async function createLoanApplication(
   redirect("/pinjaman?success=submitted");
 }
 
-export async function approveLoan(formData: FormData) {
-  await requireLoanAccess();
-  const loanId = z.string().min(1).parse(formData.get("loanId"));
-  const loan = await prisma.loan.findUnique({ where: { id: loanId } });
-  if (!loan || loan.status !== "SUBMITTED") redirect("/pinjaman?error=invalid");
-
-  const principal = loan.principalAmount.toNumber();
-  const monthlyPayment = annuityPayment(
-    principal,
-    loan.interestRate.toNumber(),
-    loan.tenureMonths,
-  );
-  const startDate = new Date();
-  const dueDate = new Date(startDate);
-  dueDate.setMonth(dueDate.getMonth() + loan.tenureMonths);
-
-  await prisma.loan.update({
-    where: { id: loanId },
-    data: {
-      status: "ACTIVE",
-      approvedAt: new Date(),
-      startDate,
-      dueDate,
-      monthlyPayment: new Prisma.Decimal(monthlyPayment),
-    },
-  });
-
-  revalidatePath("/pinjaman");
-  redirect("/pinjaman?success=approved");
-}

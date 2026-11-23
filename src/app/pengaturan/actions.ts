@@ -5,6 +5,8 @@ import { getServerSession } from "next-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
+import { audit } from "@/lib/audit";
+import { prepareImage } from "@/lib/imageUpload";
 import { prisma } from "@/lib/prisma";
 import { landingDefaults } from "@/lib/landing";
 export async function updateLanding(formData: FormData) {
@@ -51,19 +53,11 @@ export async function updateLanding(formData: FormData) {
     content[key] = String((current as Record<string, unknown>)[key] ?? "");
     if (formData.get(`remove_${key}`) === "on") content[key] = "";
     if (file instanceof File && file.size > 0) {
-      if (!file.type.startsWith("image/") || file.size > 5_000_000)
-        redirect("/pengaturan?error=image");
-      const ext =
-          file.type === "image/png"
-            ? "png"
-            : file.type === "image/webp"
-              ? "webp"
-              : "jpg",
-        name = `${key}-${Date.now()}-${crypto.randomUUID().slice(0, 6)}.${ext}`;
-      await writeFile(
-        path.join(dir, name),
-        Buffer.from(await file.arrayBuffer()),
-      );
+      // Isi file diperiksa (bukan tipe kiriman browser), dikecilkan, metadata dibuang.
+      const image = await prepareImage(file, { maxWidth: key === "heroPhoto" ? 2200 : 1600 });
+      if (!image) redirect("/pengaturan?error=image");
+      const name = `${key}-${Date.now()}-${crypto.randomUUID().slice(0, 6)}.${image.ext}`;
+      await writeFile(path.join(dir, name), image.buffer);
       content[key] = `/uploads/landing/${name}`;
     }
   }
@@ -72,6 +66,7 @@ export async function updateLanding(formData: FormData) {
     update: { content },
     create: { id: "default", content },
   });
+  await audit({ action: "SETTINGS_LANDING", summary: "Mengubah konten landing page" });
   revalidatePath("/");
   revalidatePath("/pengaturan");
   redirect("/pengaturan?success=saved");

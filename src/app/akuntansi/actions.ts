@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 async function access() {
   const s = await getServerSession(authOptions);
@@ -16,9 +17,11 @@ async function access() {
   )
     throw new Error("Tidak memiliki akses akuntansi.");
 }
+class InsufficientCash extends Error {}
+
 export async function createCashTransaction(fd: FormData) {
   await access();
-  const d = z
+  const parsedCash = z
     .object({
       accountId: z.string().min(1),
       type: z.enum(["INFLOW", "OUTFLOW"]),
@@ -27,17 +30,24 @@ export async function createCashTransaction(fd: FormData) {
       description: z.string().trim().min(3),
       note: z.string().trim().optional(),
     })
-    .parse(Object.fromEntries(fd));
+    .safeParse(Object.fromEntries(fd));
+  if (!parsedCash.success) redirect("/akuntansi/arus-kas?error=invalid");
+  const d = parsedCash.data;
+  try {
   await prisma.$transaction(async (tx) => {
     const a = await tx.cashAccount.findUnique({ where: { id: d.accountId } });
-    if (!a || (d.type === "OUTFLOW" && a.balance.toNumber() < d.amount))
-      throw new Error("Saldo kas tidak mencukupi.");
-    await tx.cashAccount.update({
-      where: { id: a.id },
+    if (!a) throw new InsufficientCash();
+    // Keluar hanya jika saldo cukup, dalam satu pernyataan atomik.
+    const moved = await tx.cashAccount.updateMany({
+      where:
+        d.type === "OUTFLOW"
+          ? { id: a.id, balance: { gte: new Prisma.Decimal(d.amount) } }
+          : { id: a.id },
       data: {
         balance: { increment: d.type === "INFLOW" ? d.amount : -d.amount },
       },
     });
+    if (moved.count === 0) throw new InsufficientCash();
     await tx.cashTransaction.create({
       data: {
         reference: `KAS-${Date.now()}-${crypto.randomUUID().slice(0, 5).toUpperCase()}`,
@@ -50,12 +60,20 @@ export async function createCashTransaction(fd: FormData) {
       },
     });
   });
+  } catch (error) {
+    if (error instanceof InsufficientCash) redirect("/akuntansi/arus-kas?error=cash");
+    throw error;
+  }
+  await audit({
+    action: "ACCOUNTING_ENTRY",
+    summary: `Kas ${d.type === "INFLOW" ? "masuk" : "keluar"} Rp${d.amount.toLocaleString("id-ID")}: ${d.description}`,
+  });
   revalidatePath("/akuntansi/arus-kas");
   redirect("/akuntansi/arus-kas?success=created");
 }
 export async function createOperationalExpense(fd: FormData) {
   await access();
-  const d = z
+  const parsedExpense = z
     .object({
       accountId: z.string().min(1),
       category: z.enum([
@@ -72,16 +90,20 @@ export async function createOperationalExpense(fd: FormData) {
       description: z.string().trim().min(3),
       note: z.string().trim().optional(),
     })
-    .parse(Object.fromEntries(fd));
+    .safeParse(Object.fromEntries(fd));
+  if (!parsedExpense.success) redirect("/akuntansi/belanja-operasional?error=invalid");
+  const d = parsedExpense.data;
+  try {
   await prisma.$transaction(async (tx) => {
     const a = await tx.cashAccount.findUnique({ where: { id: d.accountId } });
-    if (!a || a.balance.toNumber() < d.amount)
-      throw new Error("Saldo sumber kas tidak mencukupi.");
+    if (!a) throw new InsufficientCash();
     const no = `BO-${Date.now()}-${crypto.randomUUID().slice(0, 5).toUpperCase()}`;
-    await tx.cashAccount.update({
-      where: { id: a.id },
+    // Kurangi kas hanya jika saldo cukup, dalam satu pernyataan atomik.
+    const moved = await tx.cashAccount.updateMany({
+      where: { id: a.id, balance: { gte: new Prisma.Decimal(d.amount) } },
       data: { balance: { decrement: d.amount } },
     });
+    if (moved.count === 0) throw new InsufficientCash();
     await tx.operationalExpense.create({
       data: {
         expenseNumber: no,
@@ -115,6 +137,15 @@ export async function createOperationalExpense(fd: FormData) {
         amount: new Prisma.Decimal(d.amount),
       },
     });
+  });
+  } catch (error) {
+    if (error instanceof InsufficientCash)
+      redirect("/akuntansi/belanja-operasional?error=cash");
+    throw error;
+  }
+  await audit({
+    action: "ACCOUNTING_ENTRY",
+    summary: `Belanja operasional (${d.category}) Rp${d.amount.toLocaleString("id-ID")}: ${d.description}`,
   });
   revalidatePath("/akuntansi/belanja-operasional");
   revalidatePath("/akuntansi/arus-kas");

@@ -7,6 +7,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { annuityPayment, annuitySchedule } from "@/lib/annuity";
 import { authOptions } from "@/lib/auth";
+import { audit } from "@/lib/audit";
+import { logError } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 
 export type RunningLoanState = {
@@ -114,10 +116,17 @@ export async function addRunningLoan(
         });
       }
     });
-  } catch {
+  } catch (error) {
+    logError("add-running-loan", error, { memberId });
     return { message: "Pinjaman belum dapat disimpan. Silakan coba lagi." };
   }
 
+  await audit({
+    action: "LOAN_MIGRATE",
+    entity: "Loan",
+    entityId: loanNumber,
+    summary: `Mencatat pinjaman berjalan ${loanNumber} untuk ${member.name}: Rp${data.principalAmount.toLocaleString("id-ID")}, ${data.tenureMonths} bulan, mulai ${data.startMonth}, ${data.paidInstallments} angsuran sudah dibayar`,
+  });
   revalidatePath(`/anggota/${member.id}`);
   revalidatePath("/pinjaman");
   revalidatePath("/pinjaman/pembayaran");

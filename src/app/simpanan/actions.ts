@@ -7,6 +7,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { cashChannelCode } from "@/lib/cashAccounts";
+import { audit } from "@/lib/audit";
+import { logError } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { recordPrincipalSavings } from "@/lib/principalSavings";
 
@@ -150,12 +152,16 @@ export async function createSavingsTransaction(
         },
       });
       const incoming = data.transactionType === "SETORAN";
-      await tx.cashAccount.update({
-        where: { id: cash.id },
+      // Penarikan: kurangi hanya jika saldo cukup, dalam satu pernyataan atomik.
+      const moved = await tx.cashAccount.updateMany({
+        where: incoming
+          ? { id: cash.id }
+          : { id: cash.id, balance: { gte: new Prisma.Decimal(data.amount) } },
         data: {
           balance: { [incoming ? "increment" : "decrement"]: data.amount },
         },
       });
+      if (moved.count === 0) throw new Error(`Saldo ${cash.name} tidak mencukupi.`);
       await tx.cashTransaction.create({
         data: {
           reference: `KAS-${receiptNumber}`,
@@ -194,6 +200,9 @@ export async function createSavingsTransaction(
             : "Simpanan Wajib untuk periode tersebut sudah dibayar.",
       };
     }
+    if (error instanceof Error && error.message.startsWith("Saldo"))
+      return { message: error.message };
+    logError("create-savings", error, { memberId: data.memberId });
     return { message: "Transaksi belum dapat disimpan." };
   }
 
@@ -203,6 +212,12 @@ export async function createSavingsTransaction(
       : data.savingsType === "WAJIB"
         ? "/simpanan/wajib"
         : "/simpanan/sukarela";
+  await audit({
+    action: "SAVINGS_RECORD",
+    entity: "Member",
+    entityId: data.memberId,
+    summary: `${data.transactionType === "SETORAN" ? "Setoran" : "Penarikan"} simpanan ${data.savingsType} ${member.name} Rp${data.amount.toLocaleString("id-ID")} (kas ${data.cashChannel})`,
+  });
   revalidatePath("/simpanan");
   revalidatePath(destination);
   revalidatePath("/akuntansi/arus-kas");
@@ -264,6 +279,11 @@ export async function createBulkPrincipalSavings(
   if (!created)
     return { message: "Semua anggota terpilih sudah memiliki simpanan pokok." };
 
+  await audit({
+    action: "SAVINGS_RECORD",
+    summary: `Simpanan pokok serentak: ${created} anggota (kas ${data.cashChannel})`,
+    metadata: { created, channel: data.cashChannel },
+  });
   revalidatePath("/simpanan");
   revalidatePath("/simpanan/pokok");
   revalidatePath("/akuntansi/arus-kas");
@@ -375,6 +395,11 @@ export async function createBulkMandatorySavings(
 
   const skippedCount = members.length - membersToCreate.length;
 
+  await audit({
+    action: "SAVINGS_RECORD",
+    summary: `Simpanan wajib serentak periode ${data.period}: ${membersToCreate.length} anggota (kas ${data.cashChannel})`,
+    metadata: { period: data.period, created: membersToCreate.length, channel: data.cashChannel },
+  });
   revalidatePath("/simpanan");
   revalidatePath("/simpanan/wajib");
   revalidatePath("/akuntansi/arus-kas");

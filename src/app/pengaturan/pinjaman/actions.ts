@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { applyRebalance, planRebalance } from "@/lib/loanRebalance";
+import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 
 export async function rebalanceLoans(formData: FormData) {
@@ -22,6 +23,11 @@ export async function rebalanceLoans(formData: FormData) {
     { timeout: 180_000, maxWait: 10_000 },
   );
 
+  await audit({
+    action: "LOAN_REBALANCE",
+    summary: `Menghitung ulang pembagian bunga dan pokok pada ${count} angsuran`,
+    metadata: { payments: count },
+  });
   revalidatePath("/pengaturan/pinjaman");
   revalidatePath("/pinjaman/pembayaran");
   revalidatePath("/akuntansi/hasil-usaha");

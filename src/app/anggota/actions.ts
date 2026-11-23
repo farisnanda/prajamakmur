@@ -9,6 +9,7 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { nextMemberNumber } from "@/lib/memberNumber";
 import { recordPrincipalSavings } from "@/lib/principalSavings";
+import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 
 const allowedRoles = new Set(["SUPER_ADMIN", "ADMIN_KOPERASI", "PENGURUS"]);
@@ -98,6 +99,11 @@ export async function createMember(
           });
         }
       });
+      await audit({
+        action: "MEMBER_CREATE",
+        entity: "Member",
+        summary: `Menambah anggota ${parsed.data.name} (${parsed.data.memberNumber})`,
+      });
       revalidatePath("/anggota");
       redirect("/anggota?success=created");
     } catch (error) {
@@ -137,6 +143,12 @@ export async function updateMember(
     return databaseError(error);
   }
 
+  await audit({
+    action: "MEMBER_UPDATE",
+    entity: "Member",
+    entityId: id,
+    summary: `Mengubah data anggota ${parsed.data.name} (${parsed.data.memberNumber})`,
+  });
   revalidatePath("/anggota");
   redirect("/anggota?success=updated");
 }

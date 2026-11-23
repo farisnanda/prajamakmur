@@ -27,6 +27,7 @@ export default async function Page({
 }: {
   searchParams: Promise<{
     page?: string;
+    error?: string;
     q?: string;
     from?: string;
     to?: string;
@@ -88,6 +89,13 @@ export default async function Page({
         subtitle="Pengeluaran operasional berdasarkan sumber kas"
       />
       <main className="min-h-screen bg-slate-50 px-4 pb-12 pt-24 sm:px-6 lg:ml-[280px] lg:px-10 lg:pt-28">
+        {q.error && (
+          <div role="alert" className="mb-5 rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-700">
+            {q.error === "cash"
+              ? "Saldo kas tidak mencukupi untuk transaksi ini."
+              : "Data belum valid. Periksa kembali isian Anda."}
+          </div>
+        )}
         <div className="rounded-2xl bg-blue-600 p-6 text-white">
           <p className="text-sm text-blue-100">Total Belanja Operasional</p>
           <p className="mt-2 text-3xl font-bold">

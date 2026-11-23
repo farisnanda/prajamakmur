@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 
 const amount = z.coerce
@@ -30,6 +31,11 @@ export async function updateSavingsSetting(formData: FormData) {
     where: { id: "default" },
     update: parsed.data,
     create: { id: "default", ...parsed.data },
+  });
+  await audit({
+    action: "SETTINGS_SAVINGS",
+    summary: `Mengubah nominal simpanan: pokok Rp${parsed.data.principalAmount.toLocaleString("id-ID")}, wajib PNS Rp${parsed.data.mandatoryPnsAmount.toLocaleString("id-ID")}, wajib PPPK Rp${parsed.data.mandatoryPppkAmount.toLocaleString("id-ID")}`,
+    metadata: parsed.data,
   });
   revalidatePath("/");
   revalidatePath("/simpanan");

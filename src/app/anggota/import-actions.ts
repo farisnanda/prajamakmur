@@ -8,6 +8,8 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { nextMemberNumbers } from "@/lib/memberNumber";
 import { recordPrincipalSavings } from "@/lib/principalSavings";
+import { audit } from "@/lib/audit";
+import { logError } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 
 const allowedRoles = new Set(["SUPER_ADMIN", "ADMIN_KOPERASI", "PENGURUS"]);
@@ -102,7 +104,8 @@ export async function importMembers(
   const workbook = new ExcelJS.Workbook();
   try {
     await workbook.xlsx.load(await file.arrayBuffer());
-  } catch {
+  } catch (error) {
+    logError("import-members", error, { step: "read-xlsx" });
     return { status: "error", message: "File tidak dapat dibaca. Pastikan file adalah Excel (.xlsx) yang valid." };
   }
   const sheet = workbook.worksheets[0];
@@ -296,6 +299,12 @@ export async function importMembers(
     accounts = created.count;
   }, { timeout: 60_000, maxWait: 10_000 });
 
+  await audit({
+    action: "MEMBER_IMPORT",
+    entity: "Member",
+    summary: `Impor anggota dari Excel: ${parsedRows.length} anggota, ${accounts} akun login, ${principalCount} simpanan pokok otomatis`,
+    metadata: { members: parsedRows.length, accounts, principalSavings: principalCount },
+  });
   revalidatePath("/anggota");
   revalidatePath("/pengaturan/akun");
   const withoutNip = createAccounts ? parsedRows.length - withNip.length : 0;

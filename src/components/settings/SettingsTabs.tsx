@@ -6,6 +6,7 @@ const tabs = [
   { key: "pinjaman", href: "/pengaturan/pinjaman", label: "Aturan Pinjaman" },
   { key: "berita", href: "/pengaturan/berita", label: "Berita & Kegiatan" },
   { key: "akun", href: "/pengaturan/akun", label: "Akun Pengguna" },
+  { key: "audit", href: "/pengaturan/audit", label: "Jejak Audit" },
 ] as const;
 
 export type SettingsTab = (typeof tabs)[number]["key"];

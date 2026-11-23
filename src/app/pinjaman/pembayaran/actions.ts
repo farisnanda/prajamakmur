@@ -8,7 +8,29 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { allocatePayment } from "@/lib/annuity";
 import { KAS_UMUM_BANK } from "@/lib/cashAccounts";
+import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
+
+class PaymentConflict extends Error {}
+
+/**
+ * Kunci baris pinjaman lalu pastikan jumlah angsuran belum berubah sejak
+ * dibaca. Mencegah nomor angsuran ganda saat tombol ditekan dua kali atau
+ * dua petugas mencatat bersamaan.
+ */
+async function lockLoans(
+  tx: Prisma.TransactionClient,
+  expected: { loanId: string; paymentCount: number }[],
+) {
+  const ids = [...new Set(expected.map((item) => item.loanId))].sort();
+  for (const id of ids) {
+    await tx.$queryRaw`SELECT id FROM "loans" WHERE id = ${id} FOR UPDATE`;
+  }
+  for (const item of expected) {
+    const count = await tx.loanPayment.count({ where: { loanId: item.loanId } });
+    if (count !== item.paymentCount) throw new PaymentConflict();
+  }
+}
 
 export async function createLoanInstallmentPayments(formData: FormData) {
   const session = await getServerSession(authOptions);
@@ -85,7 +107,9 @@ export async function createLoanInstallmentPayments(formData: FormData) {
   }
   if (!rows.length) redirect("/pinjaman/pembayaran?error=exceeds");
   const totalAmount = rows.reduce((sum, row) => sum + row.amount.toNumber(), 0);
+  try {
   await prisma.$transaction(async (tx) => {
+    await lockLoans(tx, [{ loanId: loan.id, paymentCount: loan.payments.length }]);
     const cash = await tx.cashAccount.findUnique({
       where: { code: KAS_UMUM_BANK },
     });
@@ -138,6 +162,17 @@ export async function createLoanInstallmentPayments(formData: FormData) {
         where: { id: loan.id },
         data: { status: "LUNAS" },
       });
+  });
+  } catch (error) {
+    if (error instanceof PaymentConflict)
+      redirect("/pinjaman/pembayaran?error=conflict");
+    throw error;
+  }
+  await audit({
+    action: "LOAN_PAYMENT",
+    entity: "Loan",
+    entityId: loan.id,
+    summary: `Mencatat ${rows.length} angsuran pinjaman ${loan.loanNumber} (${loan.member.name}) total Rp${totalAmount.toLocaleString("id-ID")}`,
   });
   revalidatePath("/pinjaman/pembayaran");
   revalidatePath("/pengajuan-pinjaman");
@@ -229,7 +264,15 @@ export async function createBulkLoanPayments(formData: FormData) {
       : [];
   });
   if (rows.length)
+    try {
     await prisma.$transaction(async (tx) => {
+      await lockLoans(
+        tx,
+        rows.map((row) => ({
+          loanId: row.loanId,
+          paymentCount: loans.find((x) => x.id === row.loanId)!.payments.length,
+        })),
+      );
       const cash = await tx.cashAccount.findUnique({
         where: { code: KAS_UMUM_BANK },
       });
@@ -292,6 +335,16 @@ export async function createBulkLoanPayments(formData: FormData) {
         data: { balance: { increment: totalIn } },
       });
     });
+    } catch (error) {
+      if (error instanceof PaymentConflict)
+        redirect("/pinjaman/pembayaran?error=conflict");
+      throw error;
+    }
+  await audit({
+    action: "LOAN_PAYMENT",
+    summary: `Mencatat angsuran serentak periode ${parsed.data.period}: ${rows.length} pinjaman`,
+    metadata: { period: parsed.data.period, created: rows.length },
+  });
   revalidatePath("/pinjaman/pembayaran");
   revalidatePath("/pengajuan-pinjaman");
   revalidatePath("/dashboard");

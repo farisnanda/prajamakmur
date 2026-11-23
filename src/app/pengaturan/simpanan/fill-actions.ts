@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { missingPrincipalWhere, recordPrincipalSavings } from "@/lib/principalSavings";
 
@@ -37,6 +38,11 @@ export async function fillPrincipalSavings(formData: FormData) {
     { timeout: 120_000, maxWait: 10_000 },
   );
 
+  await audit({
+    action: "PRINCIPAL_FILL",
+    summary: `Mencatat simpanan pokok untuk ${result.count} anggota aktif (total Rp${result.total.toLocaleString("id-ID")}, kas ${parsed.data.channel})`,
+    metadata: { members: result.count, total: result.total, channel: parsed.data.channel },
+  });
   revalidatePath("/pengaturan/simpanan");
   revalidatePath("/simpanan");
   revalidatePath("/anggota");
