@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, EyeOff, LoaderCircle, LockKeyhole, UserRound } from "lucide-react";
+import { Eye, EyeOff, LoaderCircle } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -52,46 +52,34 @@ export function LoginForm() {
     router.refresh();
   }
 
+  const field =
+    "h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100";
+
   return (
     <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
       <div>
-        <label
-          htmlFor="identifier"
-          className="mb-2 block text-sm font-semibold text-slate-700"
-        >
+        <label htmlFor="identifier" className="mb-2 block text-sm font-medium text-slate-700">
           NIP/NI atau email
         </label>
-        <div className="flex h-12 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 transition focus-within:border-blue-500 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-100">
-          <UserRound size={18} className="shrink-0 text-slate-400" />
-          <input
-            id="identifier"
-            name="identifier"
-            type="text"
-            inputMode="text"
-            autoComplete="username"
-            autoCapitalize="none"
-            spellCheck={false}
-            required
-            placeholder="Masukkan NIP/NI"
-            className="h-full w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
-          />
-        </div>
+        <input
+          id="identifier"
+          name="identifier"
+          type="text"
+          inputMode="text"
+          autoComplete="username"
+          autoCapitalize="none"
+          spellCheck={false}
+          required
+          placeholder="Masukkan NIP/NI"
+          className={field}
+        />
       </div>
 
       <div>
-        <div className="mb-2 flex items-center justify-between gap-4">
-          <label
-            htmlFor="password"
-            className="text-sm font-semibold text-slate-700"
-          >
-            Kata sandi
-          </label>
-          <span className="text-right text-xs font-medium text-slate-400">
-            Hubungi administrator jika lupa
-          </span>
-        </div>
-        <div className="flex h-12 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 transition focus-within:border-blue-500 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-100">
-          <LockKeyhole size={18} className="shrink-0 text-slate-400" />
+        <label htmlFor="password" className="mb-2 block text-sm font-medium text-slate-700">
+          Kata sandi
+        </label>
+        <div className="relative">
           <input
             id="password"
             name="password"
@@ -99,15 +87,13 @@ export function LoginForm() {
             autoComplete="current-password"
             required
             placeholder="Masukkan kata sandi"
-            className="h-full w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+            className={`${field} pr-12`}
           />
           <button
             type="button"
             onClick={() => setShowPassword((value) => !value)}
-            aria-label={
-              showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"
-            }
-            className="text-slate-400 transition hover:text-blue-600"
+            aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
+            className="absolute right-1.5 top-1.5 flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
           >
             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
@@ -126,10 +112,10 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={isPending}
-        className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+        className="lp-btn lp-btn-primary flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-70"
       >
         {isPending && <LoaderCircle size={18} className="animate-spin" />}
-        {isPending ? "Memeriksa akun..." : "Masuk ke Dashboard"}
+        {isPending ? "Memeriksa akun..." : "Masuk"}
       </button>
     </form>
   );
