@@ -111,30 +111,30 @@ export function LandingView({
       {/* Hero: the offer and the simulator */}
       <section className="landing-hero relative isolate overflow-hidden">
         {c.heroPhoto && (
-          <div aria-hidden="true" className="absolute inset-0 -z-10 hidden lg:block">
+          <div aria-hidden="true" className="landing-photo absolute inset-0 -z-10 hidden lg:block">
             {/* eslint-disable-next-line @next/next/no-img-element -- CMS-uploaded media */}
-            <img src={mediaUrl(c.heroPhoto)} alt="" className="h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-r from-white via-white/90 to-white/5" />
+            <img src={mediaUrl(c.heroPhoto)} alt="" className="landing-photo-img h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/85 via-slate-950/60 to-slate-950/15" />
           </div>
         )}
         <div className={`${container} grid items-center gap-12 py-14 sm:py-20 lg:grid-cols-[1fr_26rem] lg:gap-20 lg:py-24`}>
           <div>
             {c.heroPhoto && (
-              <div className="lp-media mb-8 lg:hidden">
+              <div className="lp-media landing-photo-m mb-8 lg:hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element -- CMS-uploaded media */}
                 <img
                   src={mediaUrl(c.heroPhoto)}
                   alt="Kegiatan Koperasi Praja Makmur"
-                  className="aspect-[16/10] w-full object-cover"
+                  className="landing-photo-img aspect-[16/10] w-full object-cover"
                 />
               </div>
             )}
-            <h1 className="text-[clamp(2.25rem,3.4vw+1rem,3.75rem)] font-semibold leading-[1.06] tracking-[-0.035em] [text-wrap:balance]">
+            <h1 className={`text-[clamp(2.25rem,3.4vw+1rem,3.75rem)] font-semibold leading-[1.06] tracking-[-0.035em] [text-wrap:balance] ${c.heroPhoto ? "lg:text-white" : ""}`}>
               {c.heroTitle}
             </h1>
-            <p className="mt-6 max-w-lg text-[clamp(1rem,0.3vw+0.95rem,1.125rem)] leading-relaxed text-slate-600 [text-wrap:pretty]">
-              Pinjaman hingga <b className="font-semibold text-slate-950">Rp50 juta</b> dengan
-              bunga <b className="font-semibold text-slate-950">10% per tahun</b>, simpanan yang
+            <p className={`mt-6 max-w-lg text-[clamp(1rem,0.3vw+0.95rem,1.125rem)] leading-relaxed text-slate-600 [text-wrap:pretty] ${c.heroPhoto ? "lg:text-slate-200" : ""}`}>
+              Pinjaman hingga <b className={`font-semibold text-slate-950 ${c.heroPhoto ? "lg:text-white" : ""}`}>Rp50 juta</b> dengan
+              bunga <b className={`font-semibold text-slate-950 ${c.heroPhoto ? "lg:text-white" : ""}`}>10% per tahun</b>, simpanan yang
               tercatat rapi, dan bagi hasil untuk setiap anggota.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
@@ -143,7 +143,7 @@ export function LandingView({
               </a>
               <Link
                 href={c.primaryUrl}
-                className={`${button} lp-btn-ghost`}
+                className={`${button} lp-btn-ghost ${c.heroPhoto ? "lp-btn-on-photo" : ""}`}
               >
                 {c.primaryLabel}
               </Link>
