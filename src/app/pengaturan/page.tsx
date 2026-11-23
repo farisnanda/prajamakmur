@@ -92,6 +92,7 @@ export default async function Page({
             <div className="mt-5 grid gap-5 sm:grid-cols-2">
               {(
                 [
+                  ["heroPhoto", "Foto utama (bagian atas halaman)"],
                   ["showcaseImage2", "Foto bagian Cara Bergabung"],
                   ["ctaImage", "Latar ajakan penutup"],
                   ["feature1Image", "Foto kartu Simpanan"],

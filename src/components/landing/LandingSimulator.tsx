@@ -28,12 +28,8 @@ export function LandingSimulator() {
   const total = installment * months;
 
   return (
-    <div className="relative">
-      <div
-        aria-hidden="true"
-        className="absolute -inset-4 -z-10 rounded-[2rem] bg-gradient-to-br from-blue-200/70 via-blue-100/40 to-transparent blur-sm sm:-inset-6"
-      />
-      <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-md sm:p-7">
+    <div>
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-blue-600">
@@ -126,15 +122,15 @@ export function LandingSimulator() {
           </div>
         </div>
 
-        <div className="mt-6 rounded-2xl bg-gradient-to-br from-blue-700 to-blue-950 p-5 text-white">
-          <p className="text-xs font-medium text-blue-200">Perkiraan angsuran per bulan</p>
+        <div className="mt-6 rounded-xl bg-slate-950 p-5 text-white">
+          <p className="text-xs font-medium text-slate-400">Perkiraan angsuran per bulan</p>
           <p
             aria-live="polite"
             className="mt-1.5 text-[clamp(1.875rem,2vw+1.25rem,2.5rem)] font-semibold leading-none tracking-[-0.03em] tabular-nums"
           >
             {rupiah(installment)}
           </p>
-          <div className="mt-4 flex justify-between gap-4 border-t border-white/15 pt-3 text-xs text-blue-100 tabular-nums">
+          <div className="mt-4 flex justify-between gap-4 border-t border-white/15 pt-3 text-xs text-slate-300 tabular-nums">
             <span>Total dibayar</span>
             <span className="font-semibold text-white">{rupiah(total)}</span>
           </div>
@@ -142,7 +138,7 @@ export function LandingSimulator() {
 
         <Link
           href="/login"
-          className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+          className="lp-btn lp-btn-primary mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl px-6 text-sm font-semibold"
         >
           Ajukan pinjaman ini <ArrowRight size={17} />
         </Link>

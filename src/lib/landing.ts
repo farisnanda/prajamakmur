@@ -23,6 +23,7 @@ export type LandingData = {
   ctaTitle: string;
   ctaText: string;
   heroImage: string;
+  heroPhoto: string;
   showcaseImage1: string;
   showcaseImage2: string;
   ctaImage: string;
@@ -61,6 +62,7 @@ export const landingDefaults: LandingData = {
   ctaText:
     "Masuk untuk melihat simpanan, limit pinjaman, kewajiban, dan riwayat transaksi Anda.",
   heroImage: "",
+  heroPhoto: "",
   showcaseImage1: "",
   showcaseImage2: "",
   ctaImage: "",

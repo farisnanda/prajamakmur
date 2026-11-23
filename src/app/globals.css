@@ -165,8 +165,8 @@ main [class*="text-3xl"] {
 
 
 /* ------------------------------------------------------------------
-   Public landing page. One restrained motion: content rises softly
-   into view once. Everything is static under reduced motion.
+   Public landing page. One restrained motion: the hero enters once on
+   load; nothing else moves on scroll. Everything is static under reduced motion.
    ------------------------------------------------------------------ */
 @keyframes landing-rise {
   from {
@@ -186,14 +186,6 @@ main [class*="text-3xl"] {
   animation-delay: 0.12s;
 }
 
-@supports (animation-timeline: view()) {
-  .landing-page .landing-reveal {
-    animation: landing-rise linear both;
-    animation-timeline: view();
-    animation-range: entry 0% entry 35%;
-  }
-}
-
 .landing-page .landing-card {
   transition:
     transform 0.4s var(--ease-out),
@@ -202,9 +194,7 @@ main [class*="text-3xl"] {
 }
 @media (hover: hover) {
   .landing-page .landing-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-md);
-    border-color: var(--color-blue-200);
+    transform: translateY(-2px);
   }
 }
 
@@ -264,4 +254,203 @@ html:has(.landing-page) {
 }
 .landing-faq[open] .landing-faq-icon {
   transform: rotate(45deg);
+}
+
+/* ------------------------------------------------------------------
+   Landing hover layer (inspired by lue.studio): soft glass-like buttons
+   whose inner glow strengthens on hover, surfaces that fade in a faint
+   tint, an underline that draws, a rule that draws across a card, and
+   media that zooms 2% inside an inside-border frame. 0.4s ease; the
+   press answers in 0.2s. Pointer devices only; rests under reduced
+   motion.
+   ------------------------------------------------------------------ */
+.landing-page {
+  --lp-ease: ease;
+}
+
+.landing-page .lp-btn {
+  position: relative;
+  isolation: isolate;
+  transition:
+    box-shadow 0.4s var(--lp-ease),
+    background-color 0.4s var(--lp-ease),
+    border-color 0.4s var(--lp-ease),
+    color 0.4s var(--lp-ease),
+    scale 0.2s var(--lp-ease);
+}
+.landing-page .lp-btn:active {
+  scale: 0.97;
+}
+
+.landing-page .lp-btn-primary {
+  background-color: var(--color-blue-600);
+  color: white;
+  box-shadow:
+    inset 0 -12px 16px oklch(1 0 0 / 0.06),
+    inset 0 4px 16px oklch(1 0 0 / 0.14),
+    inset 0 0.75px 0.25px oklch(1 0 0 / 0.14),
+    inset 0 0.25px 0.25px oklch(1 0 0 / 0.32),
+    0 10px 10px oklch(0.3 0.12 262 / 0.1),
+    0 3px 6px oklch(0.3 0.12 262 / 0.16),
+    0 0 0 0.75px oklch(0.4 0.15 262 / 0.7);
+}
+.landing-page .lp-btn-ghost {
+  border: 1px solid var(--color-slate-200);
+  background-color: white;
+  color: var(--color-slate-700);
+  box-shadow: inset 0 4px 16px oklch(0.6 0.02 262 / 0), 0 1px 2px oklch(0.25 0.03 262 / 0.04);
+}
+.landing-page .lp-btn-light {
+  background-color: white;
+  color: var(--color-slate-950);
+  box-shadow: inset 0 -12px 16px oklch(0.5 0.02 262 / 0.05), 0 6px 14px oklch(0 0 0 / 0.18);
+}
+.landing-page .lp-btn-outline {
+  border: 1px solid oklch(1 0 0 / 0.25);
+  color: white;
+}
+
+@media (hover: hover) {
+  .landing-page .lp-btn-primary:hover {
+    background-color: var(--color-blue-500);
+    box-shadow:
+      inset 0 -12px 16px oklch(1 0 0 / 0.08),
+      inset 0 6px 20px oklch(1 0 0 / 0.26),
+      inset 0 0.75px 0.25px oklch(1 0 0 / 0.2),
+      inset 0 0.25px 0.25px oklch(1 0 0 / 0.4),
+      0 23px 14px oklch(0.3 0.12 262 / 0.1),
+      0 10px 10px oklch(0.3 0.12 262 / 0.14),
+      0 3px 6px oklch(0.3 0.12 262 / 0.16),
+      0 0 0 0.75px oklch(0.4 0.15 262 / 0.7);
+  }
+  .landing-page .lp-btn-ghost:hover {
+    background-color: var(--color-slate-50);
+    border-color: var(--color-slate-300);
+    box-shadow: inset 0 4px 16px oklch(0.6 0.02 262 / 0.1), 0 1px 2px oklch(0.25 0.03 262 / 0.04);
+  }
+  .landing-page .lp-btn-light:hover {
+    box-shadow: inset 0 -12px 16px oklch(0.5 0.02 262 / 0.1), 0 16px 24px oklch(0 0 0 / 0.22);
+  }
+  .landing-page .lp-btn-outline:hover {
+    background-color: oklch(1 0 0 / 0.12);
+    border-color: oklch(1 0 0 / 0.45);
+  }
+}
+
+/* Underline that draws from the left */
+.landing-page .lp-link {
+  background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat;
+  padding-bottom: 2px;
+  transition:
+    background-size 0.4s var(--lp-ease),
+    color 0.4s var(--lp-ease);
+}
+@media (hover: hover) {
+  .landing-page .lp-link:hover {
+    background-size: 100% 1px;
+  }
+}
+
+/* A faint tint fades in behind a row or card */
+.landing-page .lp-surface {
+  border-radius: 1rem;
+  transition: background-color 0.4s var(--lp-ease);
+}
+@media (hover: hover) {
+  .landing-page .lp-surface:hover {
+    background-color: oklch(0.25 0.03 262 / 0.035);
+  }
+}
+
+.landing-page .lp-rule.lp-surface {
+  border-radius: 0 0 1rem 1rem;
+}
+
+/* A rule that draws across the top of a card */
+.landing-page .lp-rule {
+  position: relative;
+}
+.landing-page .lp-rule::before,
+.landing-page .lp-rule::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: var(--color-slate-200);
+}
+.landing-page .lp-rule::after {
+  height: 2px;
+  background: var(--color-blue-600);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.6s var(--ease-out);
+}
+@media (hover: hover) {
+  .landing-page .lp-rule:hover::after {
+    transform: scaleX(1);
+  }
+}
+
+/* Media: inside border, image zooms 2% */
+.landing-page .lp-media {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.875rem;
+  background: var(--color-slate-100);
+}
+.landing-page .lp-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px oklch(0.25 0.03 262 / 0.08);
+  pointer-events: none;
+}
+.landing-page .lp-media img {
+  transition: transform 0.6s var(--lp-ease);
+}
+@media (hover: hover) {
+  .landing-page .group:hover .lp-media img,
+  .landing-page .lp-media:hover img {
+    transform: scale(1.02);
+  }
+}
+
+/* Step number fills with the accent */
+.landing-page .lp-step {
+  transition:
+    background-color 0.4s var(--lp-ease),
+    border-color 0.4s var(--lp-ease),
+    color 0.4s var(--lp-ease);
+}
+@media (hover: hover) {
+  .landing-page .group:hover .lp-step {
+    background-color: var(--color-blue-600);
+    border-color: var(--color-blue-600);
+    color: white;
+  }
+}
+
+/* A small arrow moves on hover */
+.landing-page .lp-arrow {
+  transition: transform 0.4s var(--lp-ease);
+}
+@media (hover: hover) {
+  .landing-page .group:hover .lp-arrow {
+    transform: translate(2px, -2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-page .lp-btn,
+  .landing-page .lp-link,
+  .landing-page .lp-surface,
+  .landing-page .lp-rule::after,
+  .landing-page .lp-media img,
+  .landing-page .lp-step,
+  .landing-page .lp-arrow {
+    transition: none !important;
+  }
 }

@@ -13,6 +13,7 @@ export async function updateLanding(formData: FormData) {
     throw new Error("Akses admin diperlukan.");
   const imageKeys = [
     "heroImage",
+    "heroPhoto",
     "showcaseImage1",
     "showcaseImage2",
     "ctaImage",
