@@ -33,17 +33,6 @@ const groups = [
     ],
   },
   {
-    title: "Angka Ringkas",
-    fields: [
-      ["stat1Value", "Nilai statistik 1"],
-      ["stat1Label", "Label statistik 1"],
-      ["stat2Value", "Nilai statistik 2"],
-      ["stat2Label", "Label statistik 2"],
-      ["stat3Value", "Nilai statistik 3"],
-      ["stat3Label", "Label statistik 3"],
-    ],
-  },
-  {
     title: "Ajakan Penutup",
     fields: [
       ["ctaTitle", "Judul ajakan"],

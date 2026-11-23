@@ -61,10 +61,11 @@ export function LandingView({
   news: LandingNews[];
   offer: LandingOffer;
 }) {
-  const stats = [
-    [c.stat1Value, c.stat1Label],
-    [c.stat2Value, c.stat2Label],
-    [c.stat3Value, c.stat3Label],
+  const facts = [
+    ["Plafon pinjaman", "Rp50 juta", "Anggota PNS. PPPK dan Paruh Waktu hingga Rp40 juta."],
+    ["Bunga per tahun", "10%", "Anuitas: cicilan sama besar setiap bulan."],
+    ["Tenor maksimal", "20 bulan", "Anda bisa memilih tenor 1 sampai 20 bulan."],
+    ["Simpanan pokok", rupiah(offer.principal), "Dibayar sekali, saat mendaftar."],
   ] as const;
 
   const benefits = [
@@ -111,30 +112,21 @@ export function LandingView({
       {/* Hero: the offer and the simulator */}
       <section className="landing-hero relative isolate overflow-hidden">
         {c.heroPhoto && (
-          <div aria-hidden="true" className="landing-photo absolute inset-0 -z-10 hidden lg:block">
+          <div aria-hidden="true" className="landing-photo absolute inset-x-0 top-0 -z-10 h-[36rem] lg:inset-0 lg:h-auto">
             {/* eslint-disable-next-line @next/next/no-img-element -- CMS-uploaded media */}
             <img src={mediaUrl(c.heroPhoto)} alt="" className="landing-photo-img h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/85 via-slate-950/60 to-slate-950/15" />
+            <div className="absolute inset-0 bg-slate-950/70 lg:bg-transparent lg:bg-gradient-to-r lg:from-slate-950/85 lg:via-slate-950/60 lg:to-slate-950/15" />
+            <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-white lg:hidden" />
           </div>
         )}
         <div className={`${container} grid items-center gap-12 py-14 sm:py-20 lg:grid-cols-[1fr_26rem] lg:gap-20 lg:py-24`}>
           <div>
-            {c.heroPhoto && (
-              <div className="lp-media landing-photo-m mb-8 lg:hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element -- CMS-uploaded media */}
-                <img
-                  src={mediaUrl(c.heroPhoto)}
-                  alt="Kegiatan Koperasi Praja Makmur"
-                  className="landing-photo-img aspect-[16/10] w-full object-cover"
-                />
-              </div>
-            )}
-            <h1 className={`text-[clamp(2.25rem,3.4vw+1rem,3.75rem)] font-semibold leading-[1.06] tracking-[-0.035em] [text-wrap:balance] ${c.heroPhoto ? "lg:text-white" : ""}`}>
+            <h1 className={`text-[clamp(2.25rem,3.4vw+1rem,3.75rem)] font-semibold leading-[1.06] tracking-[-0.035em] [text-wrap:balance] ${c.heroPhoto ? "text-white" : ""}`}>
               {c.heroTitle}
             </h1>
-            <p className={`mt-6 max-w-lg text-[clamp(1rem,0.3vw+0.95rem,1.125rem)] leading-relaxed text-slate-600 [text-wrap:pretty] ${c.heroPhoto ? "lg:text-slate-200" : ""}`}>
-              Pinjaman hingga <b className={`font-semibold text-slate-950 ${c.heroPhoto ? "lg:text-white" : ""}`}>Rp50 juta</b> dengan
-              bunga <b className={`font-semibold text-slate-950 ${c.heroPhoto ? "lg:text-white" : ""}`}>10% per tahun</b>, simpanan yang
+            <p className={`mt-6 max-w-lg text-[clamp(1rem,0.3vw+0.95rem,1.125rem)] leading-relaxed [text-wrap:pretty] ${c.heroPhoto ? "text-slate-200" : "text-slate-600"}`}>
+              Pinjaman hingga <b className={`font-semibold ${c.heroPhoto ? "text-white" : "text-slate-950"}`}>Rp50 juta</b> dengan
+              bunga <b className={`font-semibold ${c.heroPhoto ? "text-white" : "text-slate-950"}`}>10% per tahun</b>, simpanan yang
               tercatat rapi, dan bagi hasil untuk setiap anggota.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
@@ -155,15 +147,23 @@ export function LandingView({
         </div>
       </section>
 
-      {/* Quiet facts */}
-      <section aria-label="Fakta koperasi" className="border-y border-slate-200/70">
-        <dl className={`${container} grid divide-y divide-slate-200/70 sm:grid-cols-3 sm:divide-x sm:divide-y-0`}>
-          {stats.map(([value, label]) => (
-            <div key={label} className="flex items-baseline justify-between gap-4 py-6 sm:block sm:px-8 sm:first:pl-0">
-              <dt className="text-sm text-slate-500">{label}</dt>
-              <dd className="text-2xl font-semibold tracking-[-0.02em] tabular-nums sm:mt-1 sm:text-3xl">
+      {/* The offer in four plain facts */}
+      <section aria-label="Ketentuan pinjaman dan simpanan" className="border-y border-slate-200/70 bg-slate-50/60">
+        <dl className={`${container} grid grid-cols-2 lg:grid-cols-4`}>
+          {facts.map(([label, value, note], i) => (
+            <div
+              key={label}
+              className={`py-7 pr-4 sm:py-9 lg:px-8 lg:first:pl-0 ${
+                i % 2 === 1 ? "pl-4 sm:pl-8" : ""
+              } ${i > 0 ? "lg:border-l lg:border-slate-200/70" : ""} ${
+                i % 2 === 1 ? "border-l border-slate-200/70" : ""
+              } ${i > 1 ? "border-t border-slate-200/70 lg:border-t-0" : ""}`}
+            >
+              <dt className="text-sm font-medium text-slate-500">{label}</dt>
+              <dd className="mt-2 text-[clamp(1.5rem,1.2vw+1.1rem,2.125rem)] font-semibold leading-tight tracking-[-0.025em] text-slate-950">
                 {value}
               </dd>
+              <dd className="mt-2 text-sm leading-snug text-slate-500">{note}</dd>
             </div>
           ))}
         </dl>

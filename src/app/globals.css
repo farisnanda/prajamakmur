@@ -455,16 +455,14 @@ html:has(.landing-page) {
   }
 }
 
-/* Secondary hero button over the hero photo (desktop: dark overlay, white text) */
-@media (min-width: 1024px) {
-  .landing-page .lp-btn-on-photo {
-    background-color: oklch(1 0 0 / 0.1);
-    border-color: oklch(1 0 0 / 0.35);
-    color: white;
-    box-shadow: none;
-  }
+/* Secondary hero button over the hero photo (dark overlay, white text) */
+.landing-page .lp-btn-on-photo {
+  background-color: oklch(1 0 0 / 0.1);
+  border-color: oklch(1 0 0 / 0.35);
+  color: white;
+  box-shadow: none;
 }
-@media (min-width: 1024px) and (hover: hover) {
+@media (hover: hover) {
   .landing-page .lp-btn-on-photo:hover {
     background-color: oklch(1 0 0 / 0.2);
     border-color: oklch(1 0 0 / 0.6);
@@ -490,9 +488,6 @@ html:has(.landing-page) {
 }
 .landing-page .landing-hero > .landing-photo {
   animation: landing-photo-fade 1.4s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-.landing-page .landing-photo-m {
-  animation: landing-photo-fade 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .landing-page .landing-photo-img {
   animation: landing-photo-settle 2.4s cubic-bezier(0.22, 1, 0.36, 1) both;
