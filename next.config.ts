@@ -13,7 +13,8 @@ const nextConfig: NextConfig = {
   basePath,
   assetPrefix: basePath,
   experimental: {
-    serverActions: { bodySizeLimit: "40mb" },
+    // Cukup untuk beberapa foto 5 MB dalam satu formulir; 40 MB terlalu longgar.
+    serverActions: { bodySizeLimit: "25mb" },
   },
 };
 

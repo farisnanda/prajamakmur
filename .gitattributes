@@ -1,0 +1,3 @@
+# Skrip shell harus selalu LF, supaya jalan di server Linux dan di dalam container.
+*.sh text eol=lf
+docker-entrypoint.sh text eol=lf
